@@ -1,52 +1,24 @@
-import { inet, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-
-// ─────────────────────────────────────────────────────────────────────
-// Enums
-// ─────────────────────────────────────────────────────────────────────
-
-export const oauthProviderEnum = pgEnum('oauth_provider', ['google', 'github', 'discord'])
+import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 // ─────────────────────────────────────────────────────────────────────
 // users — application users (managed by Better Auth)
+//
+// Field shape matches Better Auth's expected user schema. Drizzle's
+// `casing: 'snake_case'` setting translates camelCase TS names to
+// snake_case PG columns at query time.
 // ─────────────────────────────────────────────────────────────────────
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
-  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
-  name: text('name'),
-  avatarUrl: text('avatar_url'),
-  passwordHash: text('password_hash'),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  name: text('name').notNull().default(''),
+  image: text('image'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  // Server Foundry-specific — not part of Better Auth's expected schema.
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 })
-
-// ─────────────────────────────────────────────────────────────────────
-// oauth_accounts — linked OAuth providers
-// ─────────────────────────────────────────────────────────────────────
-
-export const oauthAccounts = pgTable(
-  'oauth_accounts',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    provider: oauthProviderEnum('provider').notNull(),
-    providerAccountId: text('provider_account_id').notNull(),
-    accessToken: text('access_token'),
-    refreshToken: text('refresh_token'),
-    expiresAt: timestamp('expires_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => ({
-    providerAccountUnique: uniqueIndex('oauth_provider_account_uq').on(
-      table.provider,
-      table.providerAccountId,
-    ),
-  }),
-)
 
 // ─────────────────────────────────────────────────────────────────────
 // sessions — active sessions (managed by Better Auth)
@@ -57,15 +29,61 @@ export const sessions = pgTable('sessions', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  tokenHash: text('token_hash').notNull().unique(),
+  token: text('token').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  ip: inet('ip'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─────────────────────────────────────────────────────────────────────
+// accounts — auth accounts (email/password + OAuth providers)
+//
+// Replaces Phase 0's oauth_accounts. Better Auth stores both the
+// "credential" (email/password) account and OAuth provider links here.
+// providerId is the string discriminator: "credential", "google",
+// "github", "discord".
+// ─────────────────────────────────────────────────────────────────────
+
+export const accounts = pgTable('accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  providerId: text('provider_id').notNull(),
+  accountId: text('account_id').notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  idToken: text('id_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+  scope: text('scope'),
+  password: text('password'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─────────────────────────────────────────────────────────────────────
+// verifications — short-lived verification tokens
+//
+// Used by Better Auth for email verification and password reset.
+// `identifier` is typically the email; `value` is the token.
+// ─────────────────────────────────────────────────────────────────────
+
+export const verifications = pgTable('verifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ─────────────────────────────────────────────────────────────────────
 // waitlist_signups — pre-launch email capture (Phase 1)
+//
+// Server Foundry-specific, unrelated to Better Auth.
 // ─────────────────────────────────────────────────────────────────────
 
 export const waitlistSignups = pgTable('waitlist_signups', {
@@ -74,7 +92,7 @@ export const waitlistSignups = pgTable('waitlist_signups', {
   source: text('source'),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
   confirmationToken: text('confirmation_token'),
-  ip: inet('ip'),
+  ip: text('ip'),
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -85,13 +103,13 @@ export const waitlistSignups = pgTable('waitlist_signups', {
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
-export type OAuthAccount = typeof oauthAccounts.$inferSelect
 export type Session = typeof sessions.$inferSelect
+export type Account = typeof accounts.$inferSelect
+export type Verification = typeof verifications.$inferSelect
 export type WaitlistSignup = typeof waitlistSignups.$inferSelect
 export type NewWaitlistSignup = typeof waitlistSignups.$inferInsert
 
-// Notes on tables intentionally NOT defined here:
+// Notes on tables intentionally NOT defined here (introduced in later phases):
 //   hosts, pairing_codes, host_metrics_hourly, game_catalog, game_servers,
 //   game_server_logs, host_logs, backups, backup_configs, notifications,
 //   notification_preferences, agent_updates
-// These are introduced in later phases per docs/data-model.md.
