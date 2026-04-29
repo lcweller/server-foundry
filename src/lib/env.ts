@@ -25,6 +25,9 @@ const envSchema = z.object({
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().default('hello@serverfoundry.gg'),
 
+  // Analytics — optional. When set in production, loads Cloudflare Web Analytics.
+  CLOUDFLARE_ANALYTICS_BEACON_TOKEN: z.string().optional(),
+
   // Agent — required for Phase 4+
   AGENT_HMAC_SECRET: z.string().optional(),
   BACKUP_ENCRYPTION_KEY: z.string().optional(),

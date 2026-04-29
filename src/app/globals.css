@@ -1,25 +1,65 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  Forge Heat — Server Foundry landing palette.
+  Warm dark stone, a single ember accent. One source of truth lives in
+  @theme below; reference these tokens via Tailwind utility classes,
+  never as raw hex. Document in docs/branding.md once locked.
+*/
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
+  /* Surfaces */
+  --color-background: #0e0d0c;
+  --color-surface: #16140f;
+  --color-surface-elevated: #1f1b14;
+  --color-border: #2a251d;
+  --color-border-strong: #3a3328;
+
+  /* Text */
+  --color-text: #f5f1e8;
+  --color-text-muted: #8a8278;
+  --color-text-faint: #5c564e;
+
+  /* Accents */
+  --color-ember: #ff5b14;
+  --color-ember-soft: #ff7f3c;
+  --color-brass: #d4af6a;
+
+  /* Semantic */
+  --color-success: #5ba770;
+  --color-warning: #e5a645;
+  --color-danger: #d9594c;
+
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-instrument-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+/* Headlines wrap on natural break points instead of orphaned-word lines */
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+/* Selection — match the ember accent */
+::selection {
+  background-color: var(--color-ember);
+  color: var(--color-background);
+}
+
+/* Focus ring — visible but not loud */
+:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
