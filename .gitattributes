@@ -1,0 +1,21 @@
+# Normalize line endings: LF in the repo, native checkout on each platform.
+* text=auto eol=lf
+
+# Windows-specific batch files keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaries — never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Lockfiles — text but never merged
+package-lock.json -diff

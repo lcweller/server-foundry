@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Build outputs
+build/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.vitest-cache/
+playwright-report/
+test-results/
+playwright/.cache/
+
+# Environment — never commit real secrets; .env.example is the committed shape
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+.DS_Store
+Thumbs.db
+
+# Vercel / deployments
+.vercel
+
+# Turbopack / SWC caches
+.turbo/
+.swc/
+
+# TypeScript
+*.tsbuildinfo
+
+# Bun
+.bun/
+
+# claude-mem local cache (per-project memory plugin)
+.claude-mem/
+
+# Claude Code — local-only settings (allowlists, env vars). Project-shared
+# settings (if any) belong in .claude/settings.json which IS committed.
+.claude/settings.local.json
