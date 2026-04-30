@@ -1,7 +1,9 @@
-import 'server-only'
-import { env } from '@/lib/env'
+// Reachable from both Next.js routes and the custom server.ts WS
+// handler. Omits `server-only` to avoid the tsx-vs-Next bundler
+// mismatch — see src/lib/env.ts for the same note.
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { env } from '@/lib/env'
 import * as schema from './schema'
 
 const globalForDb = globalThis as unknown as {

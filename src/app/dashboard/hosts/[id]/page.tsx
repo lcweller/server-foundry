@@ -1,3 +1,4 @@
+import { LiveMetricsPanel } from '@/components/app/live-metrics'
 import { StatusPip } from '@/components/app/status-pip'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
@@ -100,6 +101,15 @@ export default async function HostDetailPage({ params }: Props) {
 
       <div className="mt-10 space-y-10">
         {isOffline ? <OfflineBanner /> : null}
+
+        <section>
+          <LiveMetricsPanel
+            hostId={host.id}
+            initialStatus={host.status}
+            fallbackRamBytes={host.ramBytes != null ? Number(host.ramBytes) : null}
+            fallbackStorageBytes={host.storageBytes != null ? Number(host.storageBytes) : null}
+          />
+        </section>
 
         <section>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Hardware</p>

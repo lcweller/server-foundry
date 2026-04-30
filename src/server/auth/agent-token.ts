@@ -1,4 +1,4 @@
-import 'server-only'
+// Reachable from server.ts via the WS handler — see src/lib/env.ts.
 import { createHash, createHmac, randomBytes } from 'node:crypto'
 import { env } from '@/lib/env'
 

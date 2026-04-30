@@ -4,9 +4,10 @@
   "private": true,
   "description": "Self-hosted control plane for multiplayer game servers",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "tsx watch server.ts",
+    "dev:next": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "tsx server.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -31,7 +32,10 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^4.0.1",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^2.5.4",
+    "tsx": "^4.19.2",
+    "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -41,9 +45,9 @@
     "@types/node": "^22.10.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.5.13",
     "drizzle-kit": "^0.31.4",
     "tailwindcss": "^4",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vitest": "^2.1.5"
   }

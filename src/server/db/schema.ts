@@ -5,6 +5,8 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
+  real,
   text,
   timestamp,
   uuid,
@@ -156,6 +158,37 @@ export const pairingCodes = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// host_metrics_hourly — aggregated host vitals (Phase 4)
+//
+// Raw heartbeat data (every 3s) is not stored long-term. The WS handler
+// aggregates into hourly buckets keyed by (host_id, hour_bucket). 30-day
+// retention; reaper job lands later.
+// ─────────────────────────────────────────────────────────────────────
+
+export const hostMetricsHourly = pgTable(
+  'host_metrics_hourly',
+  {
+    hostId: uuid('host_id')
+      .notNull()
+      .references(() => hosts.id, { onDelete: 'cascade' }),
+    hourBucket: timestamp('hour_bucket', { withTimezone: true }).notNull(),
+    samples: integer('samples').notNull().default(0),
+    cpuAvg: real('cpu_avg'),
+    cpuMax: real('cpu_max'),
+    memAvgBytes: bigint('mem_avg_bytes', { mode: 'bigint' }),
+    memMaxBytes: bigint('mem_max_bytes', { mode: 'bigint' }),
+    diskUsedBytes: bigint('disk_used_bytes', { mode: 'bigint' }),
+    netInBytes: bigint('net_in_bytes', { mode: 'bigint' }),
+    netOutBytes: bigint('net_out_bytes', { mode: 'bigint' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.hostId, table.hourBucket] }),
+    hostHourIdx: index('host_metrics_hourly_host_hour_idx').on(table.hostId, table.hourBucket),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // waitlist_signups — pre-launch email capture (Phase 1)
 //
 // Server Foundry-specific, unrelated to Better Auth.
@@ -188,6 +221,8 @@ export type NewHost = typeof hosts.$inferInsert
 export type HostStatus = (typeof hostStatusEnum.enumValues)[number]
 export type PairingCode = typeof pairingCodes.$inferSelect
 export type NewPairingCode = typeof pairingCodes.$inferInsert
+export type HostMetricsHourly = typeof hostMetricsHourly.$inferSelect
+export type NewHostMetricsHourly = typeof hostMetricsHourly.$inferInsert
 
 // Notes on tables intentionally NOT defined here (introduced in later phases):
 //   host_metrics_hourly, game_catalog, game_servers, game_server_logs,

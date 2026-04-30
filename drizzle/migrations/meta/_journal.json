@@ -15,6 +15,13 @@
       "when": 1777507041157,
       "tag": "0001_careful_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777519041032,
+      "tag": "0002_fine_white_queen",
+      "breakpoints": true
     }
   ]
 }

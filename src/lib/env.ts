@@ -1,4 +1,7 @@
-import 'server-only'
+// Loaded by both Next.js routes and the custom server.ts. The
+// `server-only` guard would throw at custom-server boot (tsx doesn't
+// have Next's bundler shim), so we omit it here. This module imports
+// `process.env` directly — it cannot run in the browser regardless.
 import { z } from 'zod'
 
 const envSchema = z.object({
