@@ -103,15 +103,21 @@ Agent side:
 
 **Goal**: User can deploy a Valheim server through the dashboard and connect to it.
 
-- [ ] Game catalog seed data (Valheim first, others later)
-- [ ] Game catalog page
-- [ ] Deploy flow: choose game → choose host → name + config → submit
-- [ ] Platform sends `deploy_server` to agent
+Platform side (committed at `43a969f`):
+- [x] Game catalog seed data (Valheim first, others later) — `src/server/db/seed.ts`, `npm run db:seed`
+- [x] Deploy flow: choose game → name + config → submit — at `/dashboard/hosts/[id]/deploy`
+- [x] Platform sends `deploy_server` to agent — via `sendToHost(hostId, msg)` from `src/server/ws/agent-handler.ts`
+- [x] Platform handles `deployment_progress` and `server_status_change` from agent
+- [x] Dashboard shows the server appearing under the host — server list on host detail
+- [x] Lifecycle controls: start, stop, restart, delete — `/dashboard/servers/[id]`
+- [x] Port conflict detection at deploy time — checked in `deployServer` action
+
+Agent side (separate `server-foundry-agent` repo, not started):
 - [ ] Agent uses SteamCMD to download Valheim, configures, starts process
 - [ ] Agent reports `deployment_progress` and `server_status_change` back
-- [ ] Dashboard shows the server appearing under the host
-- [ ] Lifecycle controls: start, stop, restart, delete
-- [ ] Port conflict detection at deploy time
+
+Polish:
+- [ ] Game catalog browse page (`/dashboard/games`) — currently games are picked inline at deploy time
 
 **Done when**: user deploys a Valheim server, connects to it via Valheim client, and stops/starts it from dashboard.
 

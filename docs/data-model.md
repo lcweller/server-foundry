@@ -158,9 +158,11 @@ Global reference table of supported games.
 | `default_port` | integer | |
 | `min_ram_mb` | integer | |
 | `rec_ram_mb` | integer | |
-| `config_schema_json` | jsonb | Zod schema as JSON |
+| `config_schema_json` | jsonb | per-game form schema (rendered server-side in the deploy wizard) |
 | `logo_url` | text | |
-| `is_enabled` | boolean | feature flag |
+| `is_enabled` | boolean | feature flag — gates which games appear in the deploy flow |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### game_servers
 Deployed instances of a game on a host.

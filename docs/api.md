@@ -37,12 +37,26 @@ Used for forms and dashboard interactions. Defined in `src/server/actions/*.ts`.
 - `removeHost({ hostId })` — soft delete, revokes agent token
 
 ### Game servers (Phase 5+)
-- `deployGameServer({ hostId, gameSlug, name, port, config })`
-- `startGameServer({ serverId })`
-- `stopGameServer({ serverId })`
-- `restartGameServer({ serverId })`
-- `deleteGameServer({ serverId })`
-- `updateGameServerConfig({ serverId, config })`
+
+Implemented in `src/server/actions/servers.ts`. All actions return
+`{ ok: true, data } | { ok: false, error, code }` and are auth-gated +
+ownership-checked against the host.
+
+- `deployServer({ hostId, gameId, name, port?, config })` — `gameId` is
+  the `game_catalog.id` (UUID); the server-side action looks up the
+  matching slug and `steam_app_id` for the agent message. Returns
+  `{ serverId }`. Port defaults to the catalog's `default_port` when
+  omitted, with per-host port-conflict detection. Codes:
+  `UNAUTHENTICATED`, `VALIDATION`, `NOT_FOUND`, `PORT_IN_USE`,
+  `INTERNAL`.
+- `startServer({ serverId })` / `stopServer({ serverId })` /
+  `restartServer({ serverId })` — dispatch to the connected agent.
+  Codes: `UNAUTHENTICATED`, `VALIDATION`, `NOT_FOUND`, `HOST_OFFLINE`.
+- `deleteServer({ serverId })` — marks the row `deleting` + sets
+  `deleted_at` immediately so the UI reflects intent regardless of
+  agent reachability; the agent confirms on-disk cleanup.
+- `updateGameServerConfig` is planned for a later iteration; currently
+  config can only be set at deploy time.
 
 ### Backups (Phase 9+)
 - `triggerBackup({ serverId })`
@@ -59,46 +73,43 @@ Used for forms and dashboard interactions. Defined in `src/server/actions/*.ts`.
 
 Used where Server Actions don't fit: webhooks, agent endpoints, public APIs, file downloads.
 
-### Public
+### Public — implemented
 - `GET /` — landing page
 - `GET /api/og?title=...` — dynamic OG image generation
+- `GET /sitemap.xml`, `GET /robots.txt`
+
+### Agent endpoints — implemented
+- `POST /api/agent/pair` — exchange pairing code for long-lived agent
+  token. Body: `{ code: string }`. Returns:
+  `{ ok: true, token, hostId } | { ok: false, error, code }`. The
+  token is HMAC-signed; subsequent WebSocket connects use it as a
+  Bearer token.
+
+### Dashboard streaming endpoints (SSE) — implemented
+- `GET /api/stream/host/:id/metrics` — live host metrics (Phase 4)
+
+### Planned (not yet implemented)
 - `POST /api/webhooks/resend` — email delivery webhooks
-
-### Agent endpoints (HMAC-signed with agent token)
-
-All agent REST endpoints live under `/api/agent/*` and require HMAC signature in the `X-Foundry-Signature` header.
-
-- `POST /api/agent/pair` — exchange pairing code for long-lived token
-  - Body: `{ code: string, hostInfo: { hostname, os, kernel, cpu, ram, storage, gpu? } }`
-  - Returns: `{ token: string, agentVersion: string }`
-- `GET /api/agent/update-manifest` — current recommended agent version + download URL
-  - Returns: `{ version: string, downloadUrl: string, signature: string, releaseNotes: string }`
-- `GET /api/agent/games/:slug/binary` — signed download URL for game server binary (if applicable)
-  - Returns: `{ downloadUrl: string, expiresAt: string }`
-
-### Dashboard streaming endpoints (SSE)
-
-- `GET /api/stream/host/:id/metrics` — Server-Sent Events stream of live metrics for a host
-- `GET /api/stream/host/:id/logs` — SSE stream of host logs
-- `GET /api/stream/server/:id/logs` — SSE stream of game server logs
-
-### Authenticated REST (where Server Actions don't fit)
-
-- `GET /api/hosts/:id/export` — CSV export of host metrics
-- `GET /api/server/:id/logs/export?from=&to=&format=` — log export
+- `GET /api/agent/update-manifest` — agent self-update channel (Phase 10)
+- `GET /api/agent/games/:slug/binary` — signed binary download (Phase 5+
+  per-game)
+- `GET /api/stream/host/:id/logs` — host log SSE stream (Phase 6)
+- `GET /api/stream/server/:id/logs` — server log SSE stream (Phase 6)
+- `GET /api/hosts/:id/export` / `GET /api/server/:id/logs/export` —
+  CSV exports (later)
 
 ## WebSocket Protocol (agent ↔ platform)
 
-The persistent connection is at `wss://serverfoundry.gg/ws/agent`. All messages are JSON, validated with Zod schemas defined in `src/shared/agent-protocol.ts`.
+The persistent connection is at `wss://serverfoundry.gg/ws/agent`. All messages are JSON, validated with Zod schemas defined in `src/shared/agent-protocol.ts` — that file is the source of truth; this section is human-readable summary.
 
 ### Connection lifecycle
 
 1. Agent opens WebSocket with `Authorization: Bearer <agent_token>` header
-2. Platform validates token, accepts connection
+2. Platform validates the token signature + DB lookup; rejects with `error` envelope + close code 4401 on failure
 3. Agent sends `hello` message with current state
-4. Platform responds with `hello_ack` + any pending commands
-5. Agent maintains heartbeat every 3s
-6. On disconnect, platform marks host `offline` after 10s grace period
+4. Platform responds with `hello_ack` carrying server time + heartbeat cadence
+5. Agent maintains heartbeat every `HEARTBEAT_INTERVAL_SECONDS` (currently 3s)
+6. On disconnect or stale heartbeat (interval + 10s grace), platform marks the host `offline`
 
 ### Message envelope
 
@@ -115,190 +126,131 @@ Every message has this shape:
 
 ### Agent → Platform messages
 
-#### `hello`
-Sent on connection. Establishes current state.
+#### `hello` — Phase 4
+Sent once on connect.
 ```ts
 payload: {
   agentVersion: string,
-  hostInfo: { hostname, os, kernel, cpu, ram, storage, gpu? },
-  runningServers: Array<{ serverId, status, pid, playerCount }>
+  hostInfo?: {
+    hostname?, os?, kernel?, cpuModel?, cpuCores?,
+    ramBytes?, storageBytes?, gpuModel?, ip?
+  }
 }
 ```
 
-#### `heartbeat`
-Sent every 3 seconds.
+#### `heartbeat` — Phase 4
+Sent every `HEARTBEAT_INTERVAL_SECONDS`. All fields flat (no nested
+`cpu`/`memory` objects). Bytes are absolute counters; the SSE consumer
+derives rates client-side.
 ```ts
 payload: {
-  cpu: { usage: number, temp?: number },        // 0-100
-  memory: { usedBytes: number, totalBytes: number },
-  disk: Array<{ mount: string, usedBytes: number, totalBytes: number }>,
-  network: { rxBps: number, txBps: number },
-  gpu?: { temp: number, usage: number }
+  cpuPercent: number,           // 0-100
+  memUsedBytes: number,
+  memTotalBytes: number,
+  diskUsedBytes?: number,
+  diskTotalBytes?: number,
+  netInBytes?: number,
+  netOutBytes?: number,
+  cpuTempC?: number,
+  gpuTempC?: number,
+  uptimeSeconds?: number
 }
 ```
 
-#### `log`
-Single log line from host or game server.
+#### `log` — accepted (Phase 6 will persist + stream)
 ```ts
 payload: {
   source: 'host' | 'server',
-  serverId?: string,           // when source = 'server'
+  serverId?: string,            // required when source = 'server'
   severity: 'debug' | 'info' | 'warn' | 'error',
   message: string,
-  timestamp: number
+  occurredAt?: number           // unix ms; envelope `ts` is the fallback
 }
 ```
+Currently the platform accepts and discards `log` messages so agents
+that send them aren't surprised by errors. Phase 6 lands the
+`game_server_logs` / `host_logs` writes plus the SSE streams.
 
-#### `server_status_change`
-Game server status update.
+#### `server_status_change` — Phase 5
+Reports the lifecycle state of a deployed game server. Note: the agent
+does not report `'deleting'` — that status is set by the platform when
+`deleteServer` is called; the agent confirms cleanup by transitioning
+to (eventually) a row hard-delete.
 ```ts
 payload: {
   serverId: string,
-  status: 'deploying' | 'running' | 'stopped' | 'crashed' | 'deleting',
+  status: 'deploying' | 'running' | 'stopped' | 'crashed',
   pid?: number,
   playerCount?: number,
-  error?: string                // when status = 'crashed'
+  error?: string                // optional context, not just for crashed
 }
 ```
 
-#### `deployment_progress`
-Streaming progress for long deployments.
+#### `deployment_progress` — Phase 5
+Streaming progress during long deploys. Currently logged on the
+platform side; the SSE bridge to the dashboard lands with logs in
+Phase 6.
 ```ts
 payload: {
   serverId: string,
-  stage: 'downloading' | 'configuring' | 'starting',
-  percent: number,              // 0-100
-  message: string
+  phase: 'queued' | 'downloading' | 'configuring' | 'starting' | 'done' | 'failed',
+  percent?: number,             // 0-100, optional
+  detail?: string
 }
 ```
 
-#### `terminal_data`
-Output from a remote terminal session.
-```ts
-payload: {
-  sessionId: string,
-  data: string                  // base64-encoded raw bytes
-}
-```
-
-#### `backup_progress`
-Streaming progress for backups.
-```ts
-payload: {
-  backupId: string,
-  percent: number,
-  bytesSoFar: number,
-  message: string
-}
-```
-
-#### `command_response`
-Response to a command from platform (correlated by message `id`).
-```ts
-payload: {
-  requestId: string,            // matches platform's command id
-  ok: boolean,
-  result?: unknown,
-  error?: string
-}
-```
+#### Planned (not yet implemented)
+- `terminal_data` — Phase 6 (remote terminal)
+- `backup_progress` — Phase 9 (backups)
+- `command_response` — generic request/response correlation; will land
+  alongside the first command that needs synchronous confirmation
 
 ### Platform → Agent messages
 
-#### `hello_ack`
-Confirms hello, may request agent update.
+#### `hello_ack` — Phase 4
 ```ts
 payload: {
-  serverTime: number,
-  pendingCommands: Command[],   // any commands queued during disconnect
-  agentUpdateAvailable?: { version, downloadUrl, signature }
+  serverTime: number,                  // unix ms
+  heartbeatIntervalSeconds: number     // currently 3
+}
+```
+Pending-command replay and agent-update advertisement are deferred
+until Phase 10 (agent self-update) and the first command that needs
+queueing.
+
+#### `error` — Phase 4
+Authentication or message-level failures the platform wants the agent
+to surface in its own logs.
+```ts
+payload: {
+  code: string,        // e.g. "AUTH_INVALID", "INVALID_MESSAGE"
+  message: string
 }
 ```
 
-#### `deploy_server`
-Deploy a new game server.
+#### `deploy_server` — Phase 5
 ```ts
 payload: {
   serverId: string,
   gameSlug: string,
+  steamAppId?: number,
+  name: string,
   port: number,
-  config: object,               // game-specific
-  steamAppId?: number
+  config: Record<string, unknown>      // opaque to the platform; per-game
 }
 ```
 
-#### `start_server` / `stop_server` / `restart_server` / `delete_server`
+#### `start_server` / `stop_server` / `restart_server` / `delete_server` — Phase 5
 ```ts
 payload: { serverId: string }
 ```
 
-#### `update_server_config`
-Apply new config to a running server (may require restart).
-```ts
-payload: {
-  serverId: string,
-  config: object,
-  restartIfRunning: boolean
-}
-```
-
-#### `backup_server`
-Trigger a backup.
-```ts
-payload: {
-  serverId: string,
-  backupId: string,
-  destination: { type: 'platform' | 's3', config: object }
-}
-```
-
-#### `restore_server`
-Restore from backup.
-```ts
-payload: {
-  serverId: string,
-  backupId: string,
-  downloadUrl: string,
-  signature: string
-}
-```
-
-#### `open_terminal` / `close_terminal`
-```ts
-payload: {
-  sessionId: string,
-  cols?: number,
-  rows?: number
-}
-```
-
-#### `terminal_input`
-Input from browser to remote shell.
-```ts
-payload: {
-  sessionId: string,
-  data: string                  // base64-encoded raw bytes
-}
-```
-
-#### `terminal_resize`
-```ts
-payload: {
-  sessionId: string,
-  cols: number,
-  rows: number
-}
-```
-
-#### `update_agent`
-Trigger a self-update on the agent.
-```ts
-payload: {
-  version: string,
-  downloadUrl: string,
-  signature: string
-}
-```
+#### Planned (not yet implemented)
+- `update_server_config` — apply new config to a running server
+- `backup_server` / `restore_server` — Phase 9 (backups)
+- `open_terminal` / `close_terminal` / `terminal_input` /
+  `terminal_resize` — Phase 6 (remote terminal)
+- `update_agent` — Phase 10 (agent self-update)
 
 ## Error handling
 
