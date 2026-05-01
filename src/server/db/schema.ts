@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -17,6 +18,14 @@ import {
 // ─────────────────────────────────────────────────────────────────────
 
 export const hostStatusEnum = pgEnum('host_status', ['online', 'offline', 'connecting', 'updating'])
+
+export const serverStatusEnum = pgEnum('server_status', [
+  'deploying',
+  'running',
+  'stopped',
+  'crashed',
+  'deleting',
+])
 
 // ─────────────────────────────────────────────────────────────────────
 // users — application users (managed by Better Auth)
@@ -189,6 +198,61 @@ export const hostMetricsHourly = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// game_catalog — global reference table of supported games (Phase 5)
+//
+// Seeded via src/server/db/seed.ts. is_enabled gates which games
+// appear in the deploy flow. config_schema_json is the per-game form
+// shape (rendered server-side in the deploy wizard).
+// ─────────────────────────────────────────────────────────────────────
+
+export const gameCatalog = pgTable('game_catalog', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  steamAppId: integer('steam_app_id'),
+  defaultPort: integer('default_port').notNull(),
+  minRamMb: integer('min_ram_mb'),
+  recRamMb: integer('rec_ram_mb'),
+  configSchemaJson: jsonb('config_schema_json'),
+  logoUrl: text('logo_url'),
+  isEnabled: boolean('is_enabled').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─────────────────────────────────────────────────────────────────────
+// game_servers — deployed instances of a game on a host (Phase 5)
+// ─────────────────────────────────────────────────────────────────────
+
+export const gameServers = pgTable(
+  'game_servers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hostId: uuid('host_id')
+      .notNull()
+      .references(() => hosts.id, { onDelete: 'cascade' }),
+    gameId: uuid('game_id')
+      .notNull()
+      .references(() => gameCatalog.id),
+    name: text('name').notNull(),
+    port: integer('port').notNull(),
+    configJson: jsonb('config_json'),
+    status: serverStatusEnum('status').notNull().default('deploying'),
+    pid: integer('pid'),
+    playerCount: integer('player_count').notNull().default(0),
+    maxPlayers: integer('max_players'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    lastStartedAt: timestamp('last_started_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => ({
+    hostIdx: index('game_servers_host_id_idx').on(table.hostId),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // waitlist_signups — pre-launch email capture (Phase 1)
 //
 // Server Foundry-specific, unrelated to Better Auth.
@@ -223,6 +287,11 @@ export type PairingCode = typeof pairingCodes.$inferSelect
 export type NewPairingCode = typeof pairingCodes.$inferInsert
 export type HostMetricsHourly = typeof hostMetricsHourly.$inferSelect
 export type NewHostMetricsHourly = typeof hostMetricsHourly.$inferInsert
+export type GameCatalog = typeof gameCatalog.$inferSelect
+export type NewGameCatalog = typeof gameCatalog.$inferInsert
+export type GameServer = typeof gameServers.$inferSelect
+export type NewGameServer = typeof gameServers.$inferInsert
+export type ServerStatus = (typeof serverStatusEnum.enumValues)[number]
 
 // Notes on tables intentionally NOT defined here (introduced in later phases):
 //   host_metrics_hourly, game_catalog, game_servers, game_server_logs,

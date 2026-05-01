@@ -1,10 +1,15 @@
 import { LiveMetricsPanel } from '@/components/app/live-metrics'
+import { ServerStatusBadge } from '@/components/app/server-status-pip'
 import { StatusPip } from '@/components/app/status-pip'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
-import { hosts as hostsTable } from '@/server/db/schema'
-import { and, eq, isNull } from 'drizzle-orm'
-import type { Metadata } from 'next'
+import {
+  gameCatalog as gameCatalogTable,
+  gameServers as gameServersTable,
+  hosts as hostsTable,
+} from '@/server/db/schema'
+import { and, asc, eq, isNull } from 'drizzle-orm'
+import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RemoveHostButton } from './remove-host-button'
@@ -53,6 +58,22 @@ export default async function HostDetailPage({ params }: Props) {
   if (!host) notFound()
 
   const isOffline = host.status === 'offline'
+
+  const servers = await db
+    .select({
+      id: gameServersTable.id,
+      name: gameServersTable.name,
+      port: gameServersTable.port,
+      status: gameServersTable.status,
+      playerCount: gameServersTable.playerCount,
+      maxPlayers: gameServersTable.maxPlayers,
+      gameName: gameCatalogTable.name,
+      gameSlug: gameCatalogTable.slug,
+    })
+    .from(gameServersTable)
+    .innerJoin(gameCatalogTable, eq(gameCatalogTable.id, gameServersTable.gameId))
+    .where(and(eq(gameServersTable.hostId, host.id), isNull(gameServersTable.deletedAt)))
+    .orderBy(asc(gameServersTable.createdAt))
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -134,12 +155,45 @@ export default async function HostDetailPage({ params }: Props) {
         </section>
 
         <section>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
-            Game servers
-          </p>
-          <p className="mt-4 text-sm text-text-muted">
-            None deployed yet. Phase 5 brings the deploy flow.
-          </p>
+          <div className="flex items-end justify-between gap-4">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
+              Game servers
+            </p>
+            <Link
+              href={`/dashboard/hosts/${host.id}/deploy` as Route}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-ember px-4 text-xs font-medium text-background transition-colors hover:bg-ember-soft"
+            >
+              Deploy server
+            </Link>
+          </div>
+
+          {servers.length === 0 ? (
+            <p className="mt-4 text-sm text-text-muted">No servers deployed yet on this host.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border rounded-md border border-border bg-surface">
+              {servers.map((server) => (
+                <li key={server.id}>
+                  <Link
+                    href={`/dashboard/servers/${server.id}` as Route}
+                    className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-elevated"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-text">{server.name}</p>
+                      <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">
+                        {server.gameName} · port {server.port}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <ServerStatusBadge status={server.status} />
+                      <span aria-hidden="true" className="text-text-faint">
+                        →
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>

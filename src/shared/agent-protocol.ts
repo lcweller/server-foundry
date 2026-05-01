@@ -65,10 +65,33 @@ export const logMessage = baseEnvelope.extend({
   }),
 })
 
+export const serverStatusChangeMessage = baseEnvelope.extend({
+  type: z.literal('server_status_change'),
+  payload: z.object({
+    serverId: z.string().uuid(),
+    status: z.enum(['deploying', 'running', 'stopped', 'crashed']),
+    pid: z.number().int().positive().optional(),
+    playerCount: z.number().int().nonnegative().optional(),
+    error: z.string().max(1024).optional(),
+  }),
+})
+
+export const deploymentProgressMessage = baseEnvelope.extend({
+  type: z.literal('deployment_progress'),
+  payload: z.object({
+    serverId: z.string().uuid(),
+    phase: z.enum(['queued', 'downloading', 'configuring', 'starting', 'done', 'failed']),
+    percent: z.number().min(0).max(100).optional(),
+    detail: z.string().max(512).optional(),
+  }),
+})
+
 export const agentToPlatformMessage = z.discriminatedUnion('type', [
   helloMessage,
   heartbeatMessage,
   logMessage,
+  serverStatusChangeMessage,
+  deploymentProgressMessage,
 ])
 
 // ─── platform → agent ──────────────────────────────────────────────
@@ -89,17 +112,64 @@ export const errorMessage = baseEnvelope.extend({
   }),
 })
 
-export const platformToAgentMessage = z.discriminatedUnion('type', [helloAckMessage, errorMessage])
+export const deployServerMessage = baseEnvelope.extend({
+  type: z.literal('deploy_server'),
+  payload: z.object({
+    serverId: z.string().uuid(),
+    gameSlug: z.string().min(1).max(64),
+    steamAppId: z.number().int().positive().optional(),
+    name: z.string().min(1).max(128),
+    port: z.number().int().min(1).max(65535),
+    config: z.record(z.string(), z.unknown()),
+  }),
+})
+
+export const startServerMessage = baseEnvelope.extend({
+  type: z.literal('start_server'),
+  payload: z.object({ serverId: z.string().uuid() }),
+})
+
+export const stopServerMessage = baseEnvelope.extend({
+  type: z.literal('stop_server'),
+  payload: z.object({ serverId: z.string().uuid() }),
+})
+
+export const restartServerMessage = baseEnvelope.extend({
+  type: z.literal('restart_server'),
+  payload: z.object({ serverId: z.string().uuid() }),
+})
+
+export const deleteServerMessage = baseEnvelope.extend({
+  type: z.literal('delete_server'),
+  payload: z.object({ serverId: z.string().uuid() }),
+})
+
+export const platformToAgentMessage = z.discriminatedUnion('type', [
+  helloAckMessage,
+  errorMessage,
+  deployServerMessage,
+  startServerMessage,
+  stopServerMessage,
+  restartServerMessage,
+  deleteServerMessage,
+])
 
 // ─── Inferred TS types ─────────────────────────────────────────────
 
 export type HelloMessage = z.infer<typeof helloMessage>
 export type HeartbeatMessage = z.infer<typeof heartbeatMessage>
 export type LogMessage = z.infer<typeof logMessage>
+export type ServerStatusChangeMessage = z.infer<typeof serverStatusChangeMessage>
+export type DeploymentProgressMessage = z.infer<typeof deploymentProgressMessage>
 export type AgentToPlatformMessage = z.infer<typeof agentToPlatformMessage>
 
 export type HelloAckMessage = z.infer<typeof helloAckMessage>
 export type ErrorMessage = z.infer<typeof errorMessage>
+export type DeployServerMessage = z.infer<typeof deployServerMessage>
+export type StartServerMessage = z.infer<typeof startServerMessage>
+export type StopServerMessage = z.infer<typeof stopServerMessage>
+export type RestartServerMessage = z.infer<typeof restartServerMessage>
+export type DeleteServerMessage = z.infer<typeof deleteServerMessage>
 export type PlatformToAgentMessage = z.infer<typeof platformToAgentMessage>
 
 // ─── Constants ─────────────────────────────────────────────────────

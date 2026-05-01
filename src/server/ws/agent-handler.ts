@@ -4,7 +4,7 @@ import type { IncomingMessage } from 'node:http'
 import { logger } from '@/lib/logger'
 import { hashAgentToken, isAgentTokenSignatureValid } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
-import { hostMetricsHourly, hosts } from '@/server/db/schema'
+import { gameServers, hostMetricsHourly, hosts } from '@/server/db/schema'
 import {
   type AgentToPlatformMessage,
   HEARTBEAT_INTERVAL_SECONDS,
@@ -131,6 +131,10 @@ async function dispatch(conn: ConnectedAgent, msg: AgentToPlatformMessage) {
       return handleHello(conn, msg)
     case 'heartbeat':
       return handleHeartbeat(conn, msg)
+    case 'server_status_change':
+      return handleServerStatusChange(conn, msg)
+    case 'deployment_progress':
+      return handleDeploymentProgress(conn, msg)
     case 'log':
       // Log handling lands in Phase 6. Accept and discard for now so
       // agents that send logs aren't surprised by errors.
@@ -160,6 +164,54 @@ async function handleHello(
   if (info.ip) updates.ip = info.ip
 
   await db.update(hosts).set(updates).where(eq(hosts.id, conn.hostId))
+}
+
+async function handleServerStatusChange(
+  conn: ConnectedAgent,
+  msg: Extract<AgentToPlatformMessage, { type: 'server_status_change' }>,
+) {
+  const { serverId, status, pid, playerCount, error } = msg.payload
+
+  // Verify the server belongs to this host before applying — agents
+  // shouldn't be able to mutate other hosts' servers.
+  const existing = await db.query.gameServers.findFirst({
+    where: and(eq(gameServers.id, serverId), eq(gameServers.hostId, conn.hostId)),
+  })
+  if (!existing) {
+    logger.warn(
+      { hostId: conn.hostId, serverId },
+      'server_status_change for unknown server on this host',
+    )
+    return
+  }
+
+  const updates: Record<string, unknown> = { status, updatedAt: new Date() }
+  if (typeof pid === 'number') updates.pid = pid
+  if (typeof playerCount === 'number') updates.playerCount = playerCount
+  if (status === 'running' && existing.status !== 'running') {
+    updates.lastStartedAt = new Date()
+  }
+
+  await db.update(gameServers).set(updates).where(eq(gameServers.id, serverId))
+
+  if (error) {
+    logger.warn({ hostId: conn.hostId, serverId, error }, 'agent reported server error')
+  }
+}
+
+async function handleDeploymentProgress(
+  conn: ConnectedAgent,
+  msg: Extract<AgentToPlatformMessage, { type: 'deployment_progress' }>,
+) {
+  // Deployment progress is informational for Phase 5 — Phase 6 streams
+  // it to the client via SSE alongside logs. Verify ownership and log.
+  const { serverId, phase, percent, detail } = msg.payload
+  const existing = await db.query.gameServers.findFirst({
+    where: and(eq(gameServers.id, serverId), eq(gameServers.hostId, conn.hostId)),
+  })
+  if (!existing) return
+
+  logger.info({ hostId: conn.hostId, serverId, phase, percent, detail }, 'deployment progress')
 }
 
 async function handleHeartbeat(
@@ -270,6 +322,22 @@ function send(socket: WebSocket, msg: PlatformToAgentMessage) {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(msg))
   }
+}
+
+// Server Actions call this to push a deploy/lifecycle command to a
+// connected agent. Returns false if the host has no live socket — the
+// caller should surface that to the user instead of letting the action
+// silently no-op.
+export function sendToHost(hostId: string, msg: PlatformToAgentMessage): boolean {
+  const conn = connections.get(hostId)
+  if (!conn || conn.socket.readyState !== conn.socket.OPEN) return false
+  send(conn.socket, msg)
+  return true
+}
+
+export function isHostConnected(hostId: string): boolean {
+  const conn = connections.get(hostId)
+  return Boolean(conn && conn.socket.readyState === conn.socket.OPEN)
 }
 
 function sendError(socket: WebSocket, code: string, message: string) {
