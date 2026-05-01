@@ -218,12 +218,41 @@ Backlog:
 
 ## Phase 11: Security hardening (1 week)
 
-- [ ] nftables firewall config in agent install
-- [ ] AppArmor profiles for game server processes
-- [ ] sysctl hardening
-- [ ] Game servers run as separate users
-- [ ] Penetration test of public surface
-- [ ] Audit log table + writes for privileged actions
+Committed:
+- [x] Audit log — `audit_log` table, instrumented across privileged
+  Server Actions, viewable from `/settings`
+  (platform commit `80c5915`)
+- [x] sysctl hardening — `99-foundry.conf` shipped + applied via
+  `install.sh` (agent commit `47d2d1e`)
+- [x] nftables firewall in agent install — default-deny inbound,
+  managed `foundry_servers` chain for per-deploy port rules
+  (agent commit `47d2d1e`)
+- [x] AppArmor profiles for game server processes — `foundry-valheim`,
+  `foundry-cs2`, `foundry-rust`, `foundry-minecraft-java` (agent
+  commits `5b95814` infrastructure, `40c409a` cutover)
+- [x] Game servers run as separate users — `foundry-srv-<slotId>`
+  static users created on demand via privilege-bridge oneshot units;
+  enforced via `User=` in per-game systemd template + AppArmor
+  filesystem scoping (agent commit `40c409a`)
+- [x] Per-game systemd template units with full hardening flags
+  (NoNewPrivileges, ProtectSystem=strict, ProtectHome,
+  RestrictAddressFamilies, SystemCallFilter, etc.) (agent commit
+  `5b95814`)
+- [x] Polkit rule scoping foundry user to `foundry-*-game@*` and
+  `foundry-srv-{provision,deprovision}@*` unit management — agent
+  never runs as root (agent commit `5b95814`)
+- [x] Logs unified through journald — game servers via
+  `journalctl -fu foundry-<game>@<slot>`, agent itself via
+  `journalctl -fu foundry-agent.service`. Phase 6 SSE feed reads a
+  single coherent stream. (agent commit `40c409a`)
+
+Pending:
+- [ ] Penetration test of public surface — OWASP ZAP baseline +
+  nikto + manual review of agent attack surface
+- [ ] AppArmor profiles for ARK, Terraria, Project Zomboid, 7DTD
+- [ ] AppArmor profile for `foundry-agent.service` itself
+- [ ] Tighten the four shipped profiles via `aa-logprof` after
+  capturing real syscall patterns from a running deploy
 
 ## Phase 12: Dashboard polish (1-2 weeks)
 

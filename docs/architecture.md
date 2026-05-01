@@ -80,27 +80,69 @@ Server Foundry consists of three components that work together. Understanding ho
 ## Component 2: Foundry Agent
 
 ### Status
-**Not part of this initial repo.** Will live in a separate repo (`server-foundry-agent`) and be built later. Documented here for context only.
+Lives in the sibling repo `server-foundry-agent`. Phases 4–11 are
+shipped (heartbeats, deploy/start/stop, logs, terminal, backups,
+self-update, security hardening).
 
 ### Stack
-- Node.js 22 (or Bun) bundled via esbuild into a single binary
+- Node.js 22 + tsx (no esbuild bundle yet — runs source directly)
 - WebSocket client (`ws`)
-- `dockerode` for container management
 - `node-pty` for remote terminal sessions
 - `systeminformation` for vitals collection
+- `aws4fetch` for S3-compatible backup destinations
+- Per-host SteamCMD for game installs
 
 ### Responsibilities
 - Connect outbound to platform via WebSocket (no inbound ports needed on user's network)
 - Send heartbeat every 3 seconds with system vitals
-- Receive deployment commands and manage game server processes
-- Stream logs back to platform
+- Receive deployment commands and manage game server units via
+  systemd (Phase 11) — see "Game-server process model" below
+- Stream logs back to platform from journald
 - Provide a tunneled remote shell on demand
 - Self-update when platform publishes a new agent version
+
+### Game-server process model (Phase 11)
+The agent does NOT spawn game servers as child processes. Each
+deployed server runs as a systemd-managed unit:
+
+```
+foundry-<gameSlug>@<slotId>.service
+  ├── User=foundry-srv-<slotId>          ← unique per server
+  ├── Group=foundry-srv-<slotId>
+  ├── AppArmorProfile=foundry-<gameSlug> ← MAC confinement
+  ├── ExecStart=/usr/local/bin/foundry-launch <slotId>
+  └── EnvironmentFile=/etc/foundry/servers/<slotId>.env
+```
+
+`<slotId>` is the first 16 hex chars of the serverId UUID (full
+UUID would overflow Linux's 32-char username limit).
+
+The agent itself is unprivileged (`User=foundry`, never root).
+Privileged operations bridge to root via two paths:
+1. **systemctl + polkit**: `/etc/polkit-1/rules.d/49-foundry-server.rules`
+   allow-lists the foundry user to manage `foundry-*-game-template@*`
+   and `foundry-srv-{provision,deprovision}@*` units. No sudo.
+2. **Privilege-bridge oneshot units**: `foundry-srv-provision@<slotId>`
+   and `foundry-srv-deprovision@<slotId>` run a strict-input-validating
+   helper (`/usr/local/sbin/foundry-server-userctl`) as root to
+   `useradd`, `chown`, `mkdir` per-server resources.
+
+Logs flow uniformly through journald: the agent follows
+`journalctl -fu` for each game-server unit AND for its own
+`foundry-agent.service`, then forwards lines as `log` messages
+over the WebSocket. Phase 6's SSE feed reads from a single coherent
+stream regardless of source.
+
+See `docs/security.md` for the full hardening posture (sysctl,
+nftables, AppArmor profiles, systemd directives).
 
 ### Connection flow
 1. User generates a pairing code on dashboard (8 chars, format `XXXX-XXXX`, 15-min expiry)
 2. User runs `curl https://serverfoundry.gg/install.sh | bash` on their Linux host with `FOUNDRY_PAIR=XXXX-XXXX` env var
-3. Install script downloads agent binary, installs systemd service, starts it
+3. Install script provisions the host: pkg deps (Node 22, AppArmor,
+   polkit, nftables), foundry user, AppArmor profiles, per-game
+   systemd templates, polkit rule, sysctl hardening, nftables
+   firewall — all installed before the agent starts
 4. Agent connects to `wss://serverfoundry.gg/ws/agent` with pairing code
 5. Platform validates code, issues long-lived agent token (HMAC-signed), agent stores it in `/etc/foundry/credentials`
 6. Agent reconnects with token after this; pairing code is single-use and expires

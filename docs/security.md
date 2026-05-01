@@ -221,41 +221,169 @@ if (!host) throw new NotFoundError() // not unauthorized — same response
 ## Agent host security
 
 ### Agent process
-- Runs as `foundry` user, not root
-- Narrow sudoers rules: only specific game-server-control commands
-- AppArmor profile restricting agent's filesystem and network access
+- Runs as `foundry` user, never root
+- Confined by `foundry-agent.service`: `User=foundry`, `NoNewPrivileges=true`,
+  `ProtectSystem=strict`, `ProtectHome=true`, `PrivateTmp=true`,
+  `ReadWritePaths=/var/lib/foundry /etc/foundry`,
+  `AmbientCapabilities=` and `CapabilityBoundingSet=` both empty
+- Member of `systemd-journal` group only — needed to follow per-unit
+  journals for log forwarding (Phase 6 SSE feed)
+- No sudo or setuid path. Privilege transitions go through systemctl
+  → polkit → root-running oneshot units (see "Privilege separation"
+  below)
+- AppArmor profile for the agent itself is Phase 11 backlog (the
+  game-server-side profiles ship today; the agent profile is
+  follow-up work tracked alongside it)
 
-### Game server isolation
-- Each game server runs as its own user (`foundry-server-<uuid>`)
-- AppArmor profile per game (Valheim profile, CS2 profile, etc.)
-- Process resource limits via systemd (CPU, memory, file handles)
-- Filesystem confined to `/var/foundry/servers/<server-id>/`
+### Game server isolation (Phase 11)
+Implemented via three intersecting controls — any one would be
+defeatable, the combination is hard to escape.
+
+**Per-server static user:**
+- Each deployed server gets a `foundry-srv-<slot>` user, where
+  `<slot>` is the first 16 hex chars of the serverId UUID
+  (full 36-char UUID would overflow the 32-char utmp username cap)
+- Primary group: same name (`foundry-srv-<slot>`)
+- The systemd unit's `User=foundry-srv-%i Group=foundry-srv-%i`
+  drops the game process to that uid:gid before exec
+- DynamicUser= was evaluated and rejected: under DynamicUser the
+  install dir is owned by a transient UID, and the only ways to
+  let the agent (foundry user) read it for backups are world-
+  readable mode or supplementary-group hacks. Static users with
+  SGID-forced foundry group ownership is the clean fit
+
+**Filesystem layout:**
+- Install dir: `/var/lib/foundry/servers/<slot>/`, mode `02750`,
+  owner `foundry-srv-<slot>:foundry`. The SGID bit forces files
+  written by the game user into the foundry group, so the agent
+  (in foundry group) can read them for backups without world
+  permissions
+- Other game servers' users are NOT in foundry group — they cannot
+  read each other's saves
+- World cannot read anything in the install dir
+
+**systemd-template hardening (per-game `foundry-<game>@<slot>.service`):**
+- `User=foundry-srv-%i Group=foundry-srv-%i SupplementaryGroups=`
+- `NoNewPrivileges=yes`, `LockPersonality=yes`, `RestrictRealtime=yes`,
+  `RestrictSUIDSGID=yes`, `RemoveIPC=yes`, `PrivateMounts=yes`
+- `ProtectSystem=strict`, `ProtectHome=yes`, `PrivateTmp=yes`,
+  `PrivateDevices=yes`, `ProtectKernelTunables=yes`,
+  `ProtectKernelModules=yes`, `ProtectKernelLogs=yes`,
+  `ProtectControlGroups=yes`, `ProtectClock=yes`, `ProtectHostname=yes`,
+  `ProtectProc=invisible`, `ProcSubset=pid`
+- `ReadWritePaths=/var/lib/foundry/servers/%i` — the game can write
+  only to its own install dir (saves, configs, logs)
+- `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6` — no raw or
+  packet sockets
+- `CapabilityBoundingSet=` and `AmbientCapabilities=` both empty —
+  no capabilities at all
+- `SystemCallFilter=@system-service` baseline plus
+  `~@privileged @resources @debug @cpu-emulation @keyring @memlock
+  @module @mount @obsolete @raw-io @reboot @swap` denies
+- `LimitNOFILE=65536`, `LimitNPROC=4096`, `TasksMax=4096` cap
+  fork bombs and fd exhaustion
+- `AppArmorProfile=-%p` attaches the per-game profile (the leading
+  `-` makes the directive non-fatal for games whose profile hasn't
+  been authored yet)
+
+**AppArmor profiles (Valheim, CS2, Rust, Minecraft to start):**
+- `/etc/apparmor.d/foundry-<game>` named profiles
+- Permissive baselines today: file access scoped to
+  `/var/lib/foundry/servers/*/` install dirs, network limited to
+  `inet/inet6/unix`, hard denies on `/etc/shadow`, `/etc/sudoers*`,
+  `/home`, `/root`, `/boot`, `/var/lib/foundry/credentials*`,
+  `/etc/foundry/**`, `/etc/ssh/**`
+- All dangerous capabilities denied: `sys_admin`, `sys_module`,
+  `sys_rawio`, `sys_ptrace`, `dac_override`, `dac_read_search`,
+  `setuid`, `setgid`, `net_admin`, `net_raw`
+- Tightening pass via `aa-logprof` after capturing real syscall
+  patterns is Phase 11 follow-up work
+
+### Privilege separation
+The agent is unprivileged. Two control paths bridge to root work:
+
+**Game-server unit management (start, stop, restart):**
+- Agent runs `systemctl start|stop|restart foundry-<game>@<slot>.service`
+- D-Bus carries the request to systemd; systemd asks polkit
+- `/etc/polkit-1/rules.d/49-foundry-server.rules` allows the
+  `foundry` user to manage `foundry-<game>@*.service` units (one
+  prefix per supported game) and the privilege-bridge units below.
+  Other systemd actions (enable/disable, edit, mask, set-property)
+  are NOT granted
+
+**Per-server user lifecycle (useradd, install dir creation):**
+- Cannot run as foundry — useradd needs root
+- Implemented via `foundry-srv-provision@<slot>.service` and
+  `foundry-srv-deprovision@<slot>.service` — oneshot units that
+  run as root, allow-listed by the same polkit rule
+- ExecStart invokes `/usr/local/sbin/foundry-server-userctl`, which
+  validates the slot id against `[A-Za-z0-9_-]{1,64}` and refuses
+  anything else
+- The agent triggers them via `systemctl start`; systemctl returns
+  non-zero if the helper exits non-zero, so the agent learns about
+  failures
+- This pattern replaces a sudoers-based approach we briefly drafted
+  — sudo would have forced us to drop `NoNewPrivileges=true` from
+  `foundry-agent.service` because sudo is setuid root
 
 ### Firewall (nftables)
-Default policy: drop everything.
+Installed by `install.sh` from `foundry-firewall.sh`. Default policy:
+drop. Idempotent — re-running replaces the `inet/foundry` table.
 
 ```
-inbound:
-  - SSH (port 22) from anywhere — optional, user can disable
-  - Game server ports — opened dynamically per deployed server
-  - Established connections — allowed
-outbound:
-  - DNS (53), NTP (123)
-  - Platform endpoints (HTTPS, WSS to serverfoundry.gg)
-  - Steam CDN (for SteamCMD downloads)
-  - Game-specific update endpoints (per game)
-  - Drop everything else
+inbound (chain input, policy drop):
+  - lo accept
+  - established/related accept
+  - ICMP / ICMPv6 accept (ping, path-MTU)
+  - SSH dport accept (override port via FOUNDRY_FW_SSH_PORT,
+    disable via FOUNDRY_FW_ALLOW_SSH=0)
+  - foundry_servers chain — agent appends rules here at deploy
+    time, removes them at delete
+
+forward (chain forward, policy drop)
+
+outbound (chain output, policy accept) — game servers and steamcmd
+  initiate outbound connections; we don't filter
+```
+
+The `foundry_servers` chain is empty at install time. The agent
+populates it as servers are deployed:
+```
+nft add rule inet foundry input udp dport <port> ct state new accept
 ```
 
 ### sysctl hardening
+Installed by `install.sh` from `99-foundry.conf` to
+`/etc/sysctl.d/99-foundry.conf`. Conservative defaults — none of
+these break interactive use.
+
 ```
-net.ipv4.ip_forward = 0
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.icmp_echo_ignore_broadcasts = 1
+# Network — defeat SYN flood, IP spoof, source route, redirect tricks
 net.ipv4.tcp_syncookies = 1
-kernel.dmesg_restrict = 1
+net.ipv4.conf.{all,default}.rp_filter = 1
+net.ipv4.conf.{all,default}.send_redirects = 0
+net.ipv4.conf.{all,default}.accept_source_route = 0
+net.ipv4.conf.{all,default}.accept_redirects = 0
+net.ipv4.conf.{all,default}.secure_redirects = 0
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.conf.all.log_martians = 1
+net.ipv6.conf.{all,default}.accept_source_route = 0
+net.ipv6.conf.{all,default}.accept_redirects = 0
+
+# Kernel — restrict information disclosure to non-root
 kernel.kptr_restrict = 2
+kernel.dmesg_restrict = 1
+kernel.unprivileged_bpf_disabled = 1
+net.core.bpf_jit_harden = 2
+
+# Filesystem — disable suid core dumps, refuse hardlink/symlink
+# TOCTOU tricks in /tmp
 fs.suid_dumpable = 0
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+fs.protected_fifos = 2
+fs.protected_regular = 2
 ```
 
 ## Incident response
