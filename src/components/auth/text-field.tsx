@@ -28,7 +28,7 @@ export const TextField = forwardRef<HTMLInputElement, Props>(function TextField(
           'h-11 rounded-md border bg-background px-3 text-base text-text placeholder:text-text-faint focus:outline-none focus:ring-2',
           error
             ? 'border-danger focus:border-danger focus:ring-danger/30'
-            : 'border-border focus:border-ember focus:ring-ember/30',
+            : 'border-border focus:border-accent focus:ring-accent/30',
         )}
         {...rest}
       />

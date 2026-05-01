@@ -11,7 +11,7 @@ type Props = {
 
 export function AppShell({ user, children }: Props) {
   return (
-    <div className="flex min-h-svh flex-col">
+    <div data-surface="ops" className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-8">

@@ -25,7 +25,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
           <p>
             <Link
               href="/forgot-password"
-              className="text-ember hover:text-ember-soft transition-colors"
+              className="text-accent hover:text-accent-soft transition-colors"
             >
               Request a new reset link
             </Link>

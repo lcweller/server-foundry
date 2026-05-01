@@ -1,10 +1,19 @@
 @import "tailwindcss";
 
 /*
-  Forge Heat — Server Foundry landing palette.
-  Warm dark stone, a single ember accent. One source of truth lives in
-  @theme below; reference these tokens via Tailwind utility classes,
-  never as raw hex. Document in docs/branding.md once locked.
+  Two visual registers live here:
+
+  1. Forge Heat (default) — warm dark stone, ember accent. Marketing
+     landing, /waitlist/confirm, /privacy, /terms. Nothing under
+     [data-surface="ops"].
+
+  2. Cinematic Operations — cool charcoal, lime accent. Scoped under
+     [data-surface="ops"] which lives on the dashboard layout root and
+     the auth shell. Same Tailwind utility names (bg-background,
+     text-text, etc.) — different values via cascade-overridden CSS
+     custom properties.
+
+  Document the locked tokens in docs/branding.md.
 */
 
 @theme {
@@ -20,12 +29,22 @@
   --color-text-muted: #8a8278;
   --color-text-faint: #5c564e;
 
-  /* Accents */
+  /* Forge Heat accents — only in marketing */
   --color-ember: #ff5b14;
   --color-ember-soft: #ff7f3c;
   --color-brass: #d4af6a;
 
-  /* Semantic */
+  /*
+    Semantic accent. In the marketing register this aliases ember.
+    In Cinematic Operations (data-surface="ops") it's overridden to
+    lime — and "alive == accent" collapses success into the same
+    token (no separate --color-success at the dashboard level).
+  */
+  --color-accent: #ff5b14;
+  --color-accent-soft: #ff7f3c;
+  --color-info: #d4af6a;
+
+  /* Semantic states */
   --color-success: #5ba770;
   --color-warning: #e5a645;
   --color-danger: #d9594c;
@@ -34,6 +53,53 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-instrument-serif);
+}
+
+/*
+  Cinematic Operations — every Tailwind color utility resolved under
+  this selector picks up the cool palette. No utility classes change;
+  only the values they reference do.
+*/
+[data-surface="ops"] {
+  --color-background: #0a0a0c;
+  --color-surface: #12131a;
+  --color-surface-elevated: #1a1c26;
+  --color-border: #252836;
+  --color-border-strong: #3a3f54;
+
+  --color-text: #e6e8f0;
+  --color-text-muted: #7a8092;
+  --color-text-faint: #4a4f60;
+
+  /* Single neon accent. Used sparingly. Lime IS "alive/running" — */
+  /* there's no separate success token at this register. */
+  --color-accent: #a3ff3c;
+  --color-accent-soft: #c8ff85;
+  --color-info: #7ab8ff;
+  --color-success: #a3ff3c;
+  --color-warning: #f5c451;
+  --color-danger: #ff5a52;
+
+  /* Cool slate background needs a position context for the ambient */
+  /* glow pseudo-element below. */
+  position: relative;
+  isolation: isolate;
+}
+
+/*
+  Soft blurred color ambience. Two low-opacity radial gradients pinned
+  to the viewport — never moves on scroll, never above content. Keeps
+  the dashboard from feeling flat-charcoal-on-flat-charcoal without
+  becoming wallpaper.
+*/
+[data-surface="ops"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 55% 40% at 12% 12%, rgba(163, 255, 60, 0.05), transparent 70%),
+    radial-gradient(ellipse 45% 55% at 88% 88%, rgba(122, 184, 255, 0.04), transparent 70%);
 }
 
 html,
@@ -51,15 +117,26 @@ h2 {
   text-wrap: balance;
 }
 
-/* Selection — match the ember accent */
+/* Selection — match the ember accent on marketing… */
 ::selection {
   background-color: var(--color-ember);
   color: var(--color-background);
 }
 
-/* Focus ring — visible but not loud */
+/* …and the lime accent on the operations surface. */
+[data-surface="ops"] ::selection {
+  background-color: var(--color-accent);
+  color: #0a0a0c;
+}
+
+/* Focus ring — visible but not loud. Marketing: ember. */
 :focus-visible {
   outline: 2px solid var(--color-ember);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Operations override — uses the active accent token. */
+[data-surface="ops"] :focus-visible {
+  outline-color: var(--color-accent);
 }

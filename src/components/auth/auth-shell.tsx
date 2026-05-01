@@ -12,7 +12,7 @@ type Props = {
 
 export function AuthShell({ eyebrow, title, subtitle, footer, children }: Props) {
   return (
-    <div className="flex min-h-svh flex-col">
+    <div data-surface="ops" className="flex min-h-svh flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
           <Link href="/" aria-label="Server Foundry — home" className="-m-2 p-2">
@@ -24,9 +24,9 @@ export function AuthShell({ eyebrow, title, subtitle, footer, children }: Props)
       <main className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
-            <span className="text-ember">{eyebrow}</span>
+            <span className="text-accent">{eyebrow}</span>
           </p>
-          <h1 className="mt-4 font-serif text-3xl leading-tight tracking-tight text-text sm:text-4xl">
+          <h1 className="mt-4 text-3xl leading-tight tracking-tight text-text sm:text-4xl">
             {title}
           </h1>
           {subtitle ? (

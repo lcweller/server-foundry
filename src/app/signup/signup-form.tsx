@@ -86,7 +86,7 @@ export function SignupForm({ footer }: { footer?: ReactNode }) {
         <button
           type="submit"
           disabled={pending}
-          className="h-11 w-full rounded-md bg-ember px-6 text-sm font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-60 disabled:cursor-not-allowed"
+          className="h-11 w-full rounded-md bg-accent px-6 text-sm font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {pending ? 'Creating account…' : 'Create account'}
         </button>

@@ -34,7 +34,7 @@ export function OAuthButtons({ callbackURL = '/dashboard' }: { callbackURL?: str
           type="button"
           onClick={() => handleOAuth(p.id)}
           disabled={pending !== null}
-          className="flex h-11 w-full items-center justify-center gap-3 rounded-md border border-border bg-surface text-sm font-medium text-text transition-colors hover:bg-surface-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex h-11 w-full items-center justify-center gap-3 rounded-md border border-border bg-surface text-sm font-medium text-text transition-colors hover:bg-surface-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <ProviderIcon id={p.id} />
           <span>{pending === p.id ? 'Redirecting…' : p.label}</span>
