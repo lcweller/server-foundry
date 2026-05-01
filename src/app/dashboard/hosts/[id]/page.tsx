@@ -1,3 +1,4 @@
+import { LiveLogsPanel } from '@/components/app/live-logs'
 import { LiveMetricsPanel } from '@/components/app/live-metrics'
 import { ServerStatusBadge } from '@/components/app/server-status-pip'
 import { StatusPip } from '@/components/app/status-pip'
@@ -194,6 +195,14 @@ export default async function HostDetailPage({ params }: Props) {
               ))}
             </ul>
           )}
+        </section>
+
+        <section>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Host logs</p>
+          <p className="mt-2 mb-4 text-xs text-text-muted">
+            Live tail of agent + host events. Filter by severity to focus.
+          </p>
+          <LiveLogsPanel source="host" entityId={host.id} />
         </section>
       </div>
     </div>

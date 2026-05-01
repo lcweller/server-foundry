@@ -29,6 +29,13 @@
       "when": 1777586308097,
       "tag": "0003_heavy_ted_forrester",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777604422748,
+      "tag": "0004_classy_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

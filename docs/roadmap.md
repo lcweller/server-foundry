@@ -123,11 +123,20 @@ Polish:
 
 ## Phase 6: Logs & remote terminal (1 week)
 
-- [ ] Agent streams game server stdout as `log` messages
-- [ ] Agent streams host syslog as `log` messages
-- [ ] Logs tab on host detail page
-- [ ] Logs filtering (severity, source, time range)
-- [ ] Search within logs
+Logs (committed):
+- [x] Platform: `host_logs` + `game_server_logs` tables (migration 0004)
+- [x] Platform: `handleLog` persists + publishes to `live-logs-bus`
+- [x] Platform: SSE endpoints `/api/stream/host/[id]/logs` and `/api/stream/server/[id]/logs`
+- [x] Platform: `LiveLogsPanel` component (live tail, severity filter, follow) on host + server detail
+- [x] Agent: line-buffered stdout/stderr piping with severity heuristic
+
+Logs polish (later):
+- [ ] Agent: stream host syslog (journalctl tail) as `log` messages
+- [ ] Time-range filtering and search within logs (currently severity + tail only)
+- [ ] Log export endpoints (CSV)
+- [ ] Partition `host_logs` / `game_server_logs` by week, archive after 7 days
+
+Remote terminal (not started):
 - [ ] Remote terminal via xterm.js + WebSocket PTY tunnel
 - [ ] Terminal tab on host detail page
 

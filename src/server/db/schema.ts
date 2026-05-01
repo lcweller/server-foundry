@@ -1,5 +1,6 @@
 import {
   bigint,
+  bigserial,
   boolean,
   index,
   integer,
@@ -26,6 +27,8 @@ export const serverStatusEnum = pgEnum('server_status', [
   'crashed',
   'deleting',
 ])
+
+export const logSeverityEnum = pgEnum('log_severity', ['debug', 'info', 'warn', 'error'])
 
 // ─────────────────────────────────────────────────────────────────────
 // users — application users (managed by Better Auth)
@@ -253,6 +256,53 @@ export const gameServers = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// host_logs — host-level log lines (Phase 6)
+//
+// High-volume table. Composite (host_id, ts DESC) index supports the
+// common "tail last N for this host" query. We store ts as the agent's
+// occurredAt when supplied, otherwise the receive time.
+// ─────────────────────────────────────────────────────────────────────
+
+export const hostLogs = pgTable(
+  'host_logs',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    hostId: uuid('host_id')
+      .notNull()
+      .references(() => hosts.id, { onDelete: 'cascade' }),
+    ts: timestamp('ts', { withTimezone: true }).notNull(),
+    severity: logSeverityEnum('severity').notNull(),
+    message: text('message').notNull(),
+  },
+  (table) => ({
+    byHostTs: index('host_logs_host_ts_idx').on(table.hostId, table.ts.desc()),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
+// game_server_logs — game-server stdout/stderr (Phase 6)
+//
+// Same shape as host_logs but keyed by server. Cascade delete on the
+// owning game_servers row.
+// ─────────────────────────────────────────────────────────────────────
+
+export const gameServerLogs = pgTable(
+  'game_server_logs',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    serverId: uuid('server_id')
+      .notNull()
+      .references(() => gameServers.id, { onDelete: 'cascade' }),
+    ts: timestamp('ts', { withTimezone: true }).notNull(),
+    severity: logSeverityEnum('severity').notNull(),
+    message: text('message').notNull(),
+  },
+  (table) => ({
+    byServerTs: index('game_server_logs_server_ts_idx').on(table.serverId, table.ts.desc()),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // waitlist_signups — pre-launch email capture (Phase 1)
 //
 // Server Foundry-specific, unrelated to Better Auth.
@@ -292,8 +342,12 @@ export type NewGameCatalog = typeof gameCatalog.$inferInsert
 export type GameServer = typeof gameServers.$inferSelect
 export type NewGameServer = typeof gameServers.$inferInsert
 export type ServerStatus = (typeof serverStatusEnum.enumValues)[number]
+export type HostLog = typeof hostLogs.$inferSelect
+export type NewHostLog = typeof hostLogs.$inferInsert
+export type GameServerLog = typeof gameServerLogs.$inferSelect
+export type NewGameServerLog = typeof gameServerLogs.$inferInsert
+export type LogSeverity = (typeof logSeverityEnum.enumValues)[number]
 
 // Notes on tables intentionally NOT defined here (introduced in later phases):
-//   host_metrics_hourly, game_catalog, game_servers, game_server_logs,
-//   host_logs, backups, backup_configs, notifications,
-//   notification_preferences, agent_updates
+//   backups, backup_configs, notifications, notification_preferences,
+//   agent_updates

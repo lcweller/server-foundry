@@ -1,3 +1,4 @@
+import { LiveLogsPanel } from '@/components/app/live-logs'
 import { ServerStatusBadge } from '@/components/app/server-status-pip'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
@@ -118,6 +119,16 @@ export default async function ServerDetailPage({ params }: Props) {
               value={game.recRamMb ? `${game.recRamMb} MB` : '—'}
             />
           </dl>
+        </section>
+
+        <section>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
+            Server logs
+          </p>
+          <p className="mt-2 mb-4 text-xs text-text-muted">
+            Live stdout + stderr from the game server process.
+          </p>
+          <LiveLogsPanel source="server" entityId={server.id} />
         </section>
       </div>
     </div>

@@ -4,7 +4,7 @@ import type { IncomingMessage } from 'node:http'
 import { logger } from '@/lib/logger'
 import { hashAgentToken, isAgentTokenSignatureValid } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
-import { gameServers, hostMetricsHourly, hosts } from '@/server/db/schema'
+import { gameServerLogs, gameServers, hostLogs, hostMetricsHourly, hosts } from '@/server/db/schema'
 import {
   type AgentToPlatformMessage,
   HEARTBEAT_INTERVAL_SECONDS,
@@ -13,6 +13,7 @@ import {
 } from '@/shared/agent-protocol'
 import { and, eq, isNull } from 'drizzle-orm'
 import type { WebSocket } from 'ws'
+import { liveLogsBus } from './live-logs-bus'
 import { liveMetricsBus } from './live-metrics-bus'
 
 // Heartbeat liveness window: if we don't see a heartbeat in this long,
@@ -136,10 +137,58 @@ async function dispatch(conn: ConnectedAgent, msg: AgentToPlatformMessage) {
     case 'deployment_progress':
       return handleDeploymentProgress(conn, msg)
     case 'log':
-      // Log handling lands in Phase 6. Accept and discard for now so
-      // agents that send logs aren't surprised by errors.
-      return
+      return handleLog(conn, msg)
   }
+}
+
+async function handleLog(
+  conn: ConnectedAgent,
+  msg: Extract<AgentToPlatformMessage, { type: 'log' }>,
+) {
+  const p = msg.payload
+  // Agent's clock is authoritative for "when this line was emitted".
+  // Fall back to the envelope ts (also agent-side) if no occurredAt.
+  const ts = new Date(p.occurredAt ?? msg.ts)
+  // Trim defensively — schema cap is 8KB but DB column is unbounded
+  // text; a runaway client could otherwise drown the table.
+  const message = p.message.length > 8192 ? p.message.slice(0, 8192) : p.message
+
+  if (p.source === 'server') {
+    if (!p.serverId) return
+    // Verify the server belongs to this host before persisting.
+    const owned = await db.query.gameServers.findFirst({
+      where: and(eq(gameServers.id, p.serverId), eq(gameServers.hostId, conn.hostId)),
+    })
+    if (!owned) return
+
+    await db
+      .insert(gameServerLogs)
+      .values({ serverId: p.serverId, ts, severity: p.severity, message })
+      .catch((err) => {
+        logger.warn({ err, serverId: p.serverId }, 'game_server_logs insert failed')
+      })
+
+    liveLogsBus.publishServerLog(p.serverId, {
+      ts: ts.getTime(),
+      severity: p.severity,
+      message,
+    })
+    return
+  }
+
+  // host log
+  await db
+    .insert(hostLogs)
+    .values({ hostId: conn.hostId, ts, severity: p.severity, message })
+    .catch((err) => {
+      logger.warn({ err, hostId: conn.hostId }, 'host_logs insert failed')
+    })
+
+  liveLogsBus.publishHostLog(conn.hostId, {
+    ts: ts.getTime(),
+    severity: p.severity,
+    message,
+  })
 }
 
 async function handleHello(
