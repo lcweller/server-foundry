@@ -15,6 +15,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import type { WebSocket } from 'ws'
 import { liveLogsBus } from './live-logs-bus'
 import { liveMetricsBus } from './live-metrics-bus'
+import { terminalSessions } from './terminal-session'
 
 // Heartbeat liveness window: if we don't see a heartbeat in this long,
 // flip the host to offline.
@@ -138,6 +139,12 @@ async function dispatch(conn: ConnectedAgent, msg: AgentToPlatformMessage) {
       return handleDeploymentProgress(conn, msg)
     case 'log':
       return handleLog(conn, msg)
+    case 'terminal_data':
+      terminalSessions.forwardData(msg)
+      return
+    case 'terminal_closed':
+      terminalSessions.forwardClosed(msg)
+      return
   }
 }
 

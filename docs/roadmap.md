@@ -136,9 +136,10 @@ Logs polish (later):
 - [ ] Log export endpoints (CSV)
 - [ ] Partition `host_logs` / `game_server_logs` by week, archive after 7 days
 
-Remote terminal (not started):
-- [ ] Remote terminal via xterm.js + WebSocket PTY tunnel
-- [ ] Terminal tab on host detail page
+Remote terminal (committed):
+- [x] Remote terminal via xterm.js + WebSocket PTY tunnel
+- [x] Terminal section on host detail page (online hosts only)
+- [ ] Audit-log terminal sessions (open/close, originating user) — Phase 11 hardening item
 
 **Done when**: user can read live logs from a deployed game server, and SSH into the host via a browser terminal.
 

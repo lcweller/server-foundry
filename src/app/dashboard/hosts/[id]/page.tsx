@@ -2,6 +2,7 @@ import { LiveLogsPanel } from '@/components/app/live-logs'
 import { LiveMetricsPanel } from '@/components/app/live-metrics'
 import { ServerStatusBadge } from '@/components/app/server-status-pip'
 import { StatusPip } from '@/components/app/status-pip'
+import { TerminalPanel } from '@/components/app/terminal-panel'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
 import {
@@ -194,6 +195,21 @@ export default async function HostDetailPage({ params }: Props) {
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+
+        <section>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Terminal</p>
+          <p className="mt-2 mb-4 text-xs text-text-muted">
+            Shell on the host as the foundry user. Tunnel goes browser → platform → agent → PTY;
+            nothing is exposed publicly.
+          </p>
+          {host.status === 'online' ? (
+            <TerminalPanel hostId={host.id} />
+          ) : (
+            <div className="rounded-md border border-border bg-surface p-5 text-sm">
+              <p className="text-text">Terminal is unavailable while the host is offline.</p>
+            </div>
           )}
         </section>
 

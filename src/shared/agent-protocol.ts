@@ -86,12 +86,34 @@ export const deploymentProgressMessage = baseEnvelope.extend({
   }),
 })
 
+// terminal_data carries raw PTY output (frequently non-UTF-8 bytes for
+// escape sequences, control characters, etc). Base64-encoded so the
+// JSON envelope stays valid.
+export const terminalDataMessage = baseEnvelope.extend({
+  type: z.literal('terminal_data'),
+  payload: z.object({
+    sessionId: z.string().uuid(),
+    data: z.string().max(131072), // 128KB cap per chunk
+  }),
+})
+
+export const terminalClosedMessage = baseEnvelope.extend({
+  type: z.literal('terminal_closed'),
+  payload: z.object({
+    sessionId: z.string().uuid(),
+    exitCode: z.number().int().optional(),
+    signal: z.string().max(32).optional(),
+  }),
+})
+
 export const agentToPlatformMessage = z.discriminatedUnion('type', [
   helloMessage,
   heartbeatMessage,
   logMessage,
   serverStatusChangeMessage,
   deploymentProgressMessage,
+  terminalDataMessage,
+  terminalClosedMessage,
 ])
 
 // ─── platform → agent ──────────────────────────────────────────────
@@ -144,6 +166,38 @@ export const deleteServerMessage = baseEnvelope.extend({
   payload: z.object({ serverId: z.string().uuid() }),
 })
 
+export const terminalOpenMessage = baseEnvelope.extend({
+  type: z.literal('terminal_open'),
+  payload: z.object({
+    sessionId: z.string().uuid(),
+    cols: z.number().int().min(1).max(1024),
+    rows: z.number().int().min(1).max(1024),
+  }),
+})
+
+export const terminalInputMessage = baseEnvelope.extend({
+  type: z.literal('terminal_input'),
+  payload: z.object({
+    sessionId: z.string().uuid(),
+    data: z.string().max(65536), // 64KB cap; keystrokes are tiny but
+    // pasted blocks can be larger
+  }),
+})
+
+export const terminalResizeMessage = baseEnvelope.extend({
+  type: z.literal('terminal_resize'),
+  payload: z.object({
+    sessionId: z.string().uuid(),
+    cols: z.number().int().min(1).max(1024),
+    rows: z.number().int().min(1).max(1024),
+  }),
+})
+
+export const terminalCloseMessage = baseEnvelope.extend({
+  type: z.literal('terminal_close'),
+  payload: z.object({ sessionId: z.string().uuid() }),
+})
+
 export const platformToAgentMessage = z.discriminatedUnion('type', [
   helloAckMessage,
   errorMessage,
@@ -152,6 +206,10 @@ export const platformToAgentMessage = z.discriminatedUnion('type', [
   stopServerMessage,
   restartServerMessage,
   deleteServerMessage,
+  terminalOpenMessage,
+  terminalInputMessage,
+  terminalResizeMessage,
+  terminalCloseMessage,
 ])
 
 // ─── Inferred TS types ─────────────────────────────────────────────
@@ -161,6 +219,8 @@ export type HeartbeatMessage = z.infer<typeof heartbeatMessage>
 export type LogMessage = z.infer<typeof logMessage>
 export type ServerStatusChangeMessage = z.infer<typeof serverStatusChangeMessage>
 export type DeploymentProgressMessage = z.infer<typeof deploymentProgressMessage>
+export type TerminalDataMessage = z.infer<typeof terminalDataMessage>
+export type TerminalClosedMessage = z.infer<typeof terminalClosedMessage>
 export type AgentToPlatformMessage = z.infer<typeof agentToPlatformMessage>
 
 export type HelloAckMessage = z.infer<typeof helloAckMessage>
@@ -170,6 +230,10 @@ export type StartServerMessage = z.infer<typeof startServerMessage>
 export type StopServerMessage = z.infer<typeof stopServerMessage>
 export type RestartServerMessage = z.infer<typeof restartServerMessage>
 export type DeleteServerMessage = z.infer<typeof deleteServerMessage>
+export type TerminalOpenMessage = z.infer<typeof terminalOpenMessage>
+export type TerminalInputMessage = z.infer<typeof terminalInputMessage>
+export type TerminalResizeMessage = z.infer<typeof terminalResizeMessage>
+export type TerminalCloseMessage = z.infer<typeof terminalCloseMessage>
 export type PlatformToAgentMessage = z.infer<typeof platformToAgentMessage>
 
 // ─── Constants ─────────────────────────────────────────────────────

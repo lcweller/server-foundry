@@ -13,6 +13,7 @@ import { type IncomingMessage, createServer } from 'node:http'
 import next from 'next'
 import { WebSocketServer } from 'ws'
 import { handleAgentSocket } from './src/server/ws/agent-handler'
+import { handleTerminalSocket } from './src/server/ws/terminal-handler'
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = process.env.HOSTNAME ?? '0.0.0.0'
@@ -28,9 +29,10 @@ async function main() {
     void handle(req, res)
   })
 
-  // Upgrade routing — only /ws/agent is recognised today. Anything else
-  // gets the socket destroyed so we don't leak open connections.
+  // Upgrade routing — /ws/agent for paired hosts, /ws/terminal for
+  // browser xterm sessions. Anything else gets the socket destroyed.
   const agentWss = new WebSocketServer({ noServer: true })
+  const terminalWss = new WebSocketServer({ noServer: true })
 
   httpServer.on('upgrade', (req: IncomingMessage, socket, head) => {
     const url = req.url ?? ''
@@ -39,6 +41,13 @@ async function main() {
     if (pathname === '/ws/agent') {
       agentWss.handleUpgrade(req, socket, head, (ws) => {
         void handleAgentSocket(ws, req)
+      })
+      return
+    }
+
+    if (pathname === '/ws/terminal') {
+      terminalWss.handleUpgrade(req, socket, head, (ws) => {
+        void handleTerminalSocket(ws, req)
       })
       return
     }
