@@ -156,7 +156,22 @@ Complete feature list for Server Foundry, organized by area. Each feature has im
 - [ ] Content Security Policy headers
 - [ ] Secrets sanitizer in logs
 
-## Phase 12: GameServerOS
+## Phase 12: Dashboard polish
+
+Numbering matches `docs/roadmap.md`. (Earlier drafts of this doc had
+Phase 12 and Phase 13 swapped; aligned now.)
+
+- [x] Cinematic Operations UI (charcoal background, frosted glass, lime accent)
+- [x] Sankey traffic flow diagram (Hosts → Games → Players)
+- [x] Uptime heatmap (24h, presence-proxy)
+- [x] Host cards with callsigns (A01, B02, C03)
+- [x] Worlds in session grid
+- [x] Recent activity feed
+- [x] Empty + error + loading states across redesigned surfaces
+- [x] Polished animations + transitions (smoothed status-pip color
+  changes, hover lift on Surface, ambient glow layer)
+
+## Phase 13: GameServerOS
 
 - [ ] Custom Debian 12 ISO via `live-build`
 - [ ] First-boot TUI installer (whiptail)
@@ -164,15 +179,6 @@ Complete feature list for Server Foundry, organized by area. Each feature has im
 - [ ] Agent pre-baked, auto-configures
 - [ ] Hardened base image
 - [ ] ISO download from dashboard (signed URL)
-
-## Phase 13: Dashboard polish
-
-- [ ] Cinematic operations UI (charcoal background, frosted glass, neon accent)
-- [ ] Sankey traffic flow diagram (Hosts → Games → Players)
-- [ ] Uptime heatmap (24h or 7d)
-- [ ] Host cards with callsigns (A01, B02, C03)
-- [ ] Worlds in session grid
-- [ ] Recent activity feed
 
 ## Out of scope for v1
 

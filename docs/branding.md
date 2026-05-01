@@ -52,17 +52,31 @@ gamer-bro slang ("epic", "sick", "GG"), enterprise-speak ("synergy", "leverage",
 
 ## Visual identity
 
-### Status: not yet locked
+### Status: locked (split register)
 
-The landing page design exercise (Claude Design or another design pass) will produce 2-3 directions. Once one is chosen, document the system here.
+Two registers ship today, split by surface:
 
-### What we know we want
+- **Forge Heat** — warm dark stone, ember (#ff5b14) accent. Used on
+  the marketing landing page (`/`, `/privacy`, `/terms`,
+  `/waitlist/confirm`) and any other pre-account surface. Inviting,
+  promotional, feels like a brand more than a tool.
+- **Cinematic Operations** — cool charcoal, lime (#a3ff3c) accent.
+  Used everywhere behind the auth wall: `/dashboard/*`, `/settings`,
+  and all auth pages (`/login`, `/signup`, `/forgot-password`,
+  `/reset-password`, `/verify-email`). Cinematic, operational, dense.
+
+Same Tailwind utility names (`bg-background`, `text-text`,
+`bg-accent`, etc.) resolve to different values via a
+`[data-surface="ops"]` attribute on `<AppShell>` and `<AuthShell>`
+roots. See `src/app/globals.css`.
+
+### What we know we want (still)
 - Premium feel — bar is Linear, Vercel, Framer, Arc
-- Distinct from generic dark-mode-emerald-green SaaS dashboards (we tried, it's everywhere)
-- Should feel different on landing page vs dashboard — dashboard can be more cinematic/operational, landing page more inviting/promotional
-- Open to: serif typography, unexpected color palettes, motion, asymmetric layouts
+- Distinct from generic dark-mode-emerald-green SaaS dashboards
+- Different feel on landing page vs dashboard — Forge Heat invites,
+  Cinematic Operations operates. The split below makes that real.
 
-### What we know we don't want
+### What we know we don't want (still)
 - Cartoonish gaming aesthetics (pixel art, chunky 80s, RGB rainbow)
 - Generic SaaS dashboard with rounded cards and emerald accents
 - Tech-bro neon cyberpunk
@@ -80,30 +94,81 @@ Not designed yet. Brief for the eventual designer (or design AI):
 
 ## Color palette
 
-Not locked. Once chosen, document:
-- Primary background
-- Surface (cards, panels)
-- Border
-- Text primary
-- Text muted
-- Accent (the signature color — the "lime" or "emerald" or whatever we land on)
-- Semantic: success, warning, danger, info
+Locked. Two registers, same Tailwind utility names, different values
+under `[data-surface="ops"]`. Source of truth: `src/app/globals.css`.
 
-The previous prototyping leaned on emerald/lime (#10b981, #a3ff3c) but this is NOT locked in. The landing page exercise should explore alternatives:
-- Warm: terracotta, amber, rust
-- Cool: ice blue, cyan, electric purple
-- Unexpected: cream + black, sepia, deep navy + gold
+### Forge Heat (marketing default)
+
+| Role | Token | Value |
+|---|---|---|
+| Background | `--color-background` | `#0e0d0c` |
+| Surface | `--color-surface` | `#16140f` |
+| Surface elevated | `--color-surface-elevated` | `#1f1b14` |
+| Border | `--color-border` | `#2a251d` |
+| Border strong | `--color-border-strong` | `#3a3328` |
+| Text | `--color-text` | `#f5f1e8` |
+| Text muted | `--color-text-muted` | `#8a8278` |
+| Text faint | `--color-text-faint` | `#5c564e` |
+| Ember (accent) | `--color-ember` | `#ff5b14` |
+| Ember soft | `--color-ember-soft` | `#ff7f3c` |
+| Brass | `--color-brass` | `#d4af6a` |
+| Success | `--color-success` | `#5ba770` |
+| Warning | `--color-warning` | `#e5a645` |
+| Danger | `--color-danger` | `#d9594c` |
+
+`--color-accent` aliases ember at this register; `--color-info`
+aliases brass.
+
+### Cinematic Operations (dashboard, auth, settings)
+
+| Role | Token | Value |
+|---|---|---|
+| Background | `--color-background` | `#0a0a0c` |
+| Surface | `--color-surface` | `#12131a` |
+| Surface elevated | `--color-surface-elevated` | `#1a1c26` |
+| Border | `--color-border` | `#252836` |
+| Border strong | `--color-border-strong` | `#3a3f54` |
+| Text | `--color-text` | `#e6e8f0` |
+| Text muted | `--color-text-muted` | `#7a8092` |
+| Text faint | `--color-text-faint` | `#4a4f60` |
+| Accent (lime) | `--color-accent` | `#a3ff3c` |
+| Accent soft | `--color-accent-soft` | `#c8ff85` |
+| Info | `--color-info` | `#7ab8ff` |
+| Warning | `--color-warning` | `#f5c451` |
+| Danger | `--color-danger` | `#ff5a52` |
+
+**"Alive == accent"** — `--color-success` collapses to `--color-accent`
+at this register. There is no separate green for success; lime IS
+the operational "running / healthy" colour. Status pips that show
+in-flight/transient states (deploying, updating, connecting) use
+info or warning, never accent — those animate with `animate-pulse`.
+
+### Ambient glow
+
+Every surface under `[data-surface="ops"]` gets a fixed-position
+radial-gradient pseudo-element pinned to the viewport: lime + cool-
+blue, sub-5% opacity, never moves on scroll. Provides depth without
+becoming wallpaper. Defined in `globals.css`.
+
+### Contrast
+
+All AA at body text size. text-faint (`#4a4f60`) on background fails
+AA at 2.5:1 — by design, only used for decorative eyebrows and
+de-emphasised labels, never paragraph text.
 
 ## Typography
 
-Not locked. Reference points:
-- **Inter** — modern sans, current default for tech UI
-- **Geist** (Vercel's typeface) — refined sans
-- **Instrument Serif** — for dramatic headline moments
-- **Söhne / National 2** — premium feels (commercial)
-- **JetBrains Mono / Geist Mono** — for technical/data text
+Locked. Same fonts shipped today, used differently per register.
 
-Decision point: Does Server Foundry's typography lean modern-sans throughout, or use a serif moment somewhere (e.g., headlines on landing page, sans everywhere else)?
+| Family | Token | Where |
+|---|---|---|
+| Geist Sans | `--font-sans` | All body, all UI labels, dashboard headlines |
+| Geist Mono | `--font-mono` | Technical data only — callsigns, IPs, ports, byte counts, log lines, IDs, timestamps |
+| Instrument Serif | `--font-serif` | Marketing landing hero + section headlines ONLY. NOT used in dashboard or auth — Cinematic Operations is operational, not dramatic. |
+
+The serif moment lives entirely on Forge Heat surfaces. Anything
+behind `[data-surface="ops"]` is sans-only — there are no `font-serif`
+class references in dashboard, auth, or settings code today.
 
 ## Sound and motion
 
