@@ -6,14 +6,16 @@ import { TerminalPanel } from '@/components/app/terminal-panel'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
 import {
+  agentUpdates as agentUpdatesTable,
   gameCatalog as gameCatalogTable,
   gameServers as gameServersTable,
   hosts as hostsTable,
 } from '@/server/db/schema'
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { AgentUpdatesSection } from './agent-updates-section'
 import { RemoveHostButton } from './remove-host-button'
 
 export const metadata: Metadata = {
@@ -76,6 +78,31 @@ export default async function HostDetailPage({ params }: Props) {
     .innerJoin(gameCatalogTable, eq(gameCatalogTable.id, gameServersTable.gameId))
     .where(and(eq(gameServersTable.hostId, host.id), isNull(gameServersTable.deletedAt)))
     .orderBy(asc(gameServersTable.createdAt))
+
+  const updateRows = await db
+    .select({
+      id: agentUpdatesTable.id,
+      fromVersion: agentUpdatesTable.fromVersion,
+      toVersion: agentUpdatesTable.toVersion,
+      status: agentUpdatesTable.status,
+      errorMessage: agentUpdatesTable.errorMessage,
+      startedAt: agentUpdatesTable.startedAt,
+      completedAt: agentUpdatesTable.completedAt,
+    })
+    .from(agentUpdatesTable)
+    .where(eq(agentUpdatesTable.hostId, host.id))
+    .orderBy(desc(agentUpdatesTable.startedAt))
+    .limit(20)
+
+  const updateItems = updateRows.map((u) => ({
+    id: u.id,
+    fromVersion: u.fromVersion,
+    toVersion: u.toVersion,
+    status: u.status,
+    errorMessage: u.errorMessage,
+    startedAt: u.startedAt.toISOString(),
+    completedAt: u.completedAt ? u.completedAt.toISOString() : null,
+  }))
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
@@ -211,6 +238,21 @@ export default async function HostDetailPage({ params }: Props) {
               <p className="text-text">Terminal is unavailable while the host is offline.</p>
             </div>
           )}
+        </section>
+
+        <section>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
+            Agent updates
+          </p>
+          <p className="mt-2 mb-4 text-xs text-text-muted">
+            Verified, signed self-update flow. Health check rolls back automatically if the new
+            agent fails to come online.
+          </p>
+          <AgentUpdatesSection
+            hostId={host.id}
+            currentVersion={host.agentVersion ?? null}
+            initialUpdates={updateItems}
+          />
         </section>
 
         <section>

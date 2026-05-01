@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { hashAgentToken, isAgentTokenSignatureValid } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
 import {
+  agentUpdates,
   backups,
   gameServerLogs,
   gameServers,
@@ -168,7 +169,76 @@ async function dispatch(conn: ConnectedAgent, msg: AgentToPlatformMessage) {
       return handleBackupProgress(conn, msg)
     case 'restore_progress':
       return handleRestoreProgress(conn, msg)
+    case 'agent_update_progress':
+      return handleAgentUpdateProgress(conn, msg)
   }
+}
+
+async function handleAgentUpdateProgress(
+  conn: ConnectedAgent,
+  msg: Extract<AgentToPlatformMessage, { type: 'agent_update_progress' }>,
+) {
+  const p = msg.payload
+  const hostRow = await db.query.hosts.findFirst({
+    where: eq(hosts.id, conn.hostId),
+    columns: { id: true, name: true, userId: true, agentVersion: true },
+  })
+  if (!hostRow) return
+
+  const update = await db.query.agentUpdates.findFirst({
+    where: and(eq(agentUpdates.id, p.updateId), eq(agentUpdates.hostId, conn.hostId)),
+  })
+  if (!update) {
+    logger.warn(
+      { hostId: conn.hostId, updateId: p.updateId },
+      'agent_update_progress for unknown row',
+    )
+    return
+  }
+
+  if (p.phase === 'completed') {
+    await db
+      .update(agentUpdates)
+      .set({ status: 'completed', completedAt: new Date() })
+      .where(eq(agentUpdates.id, p.updateId))
+    void createNotification({
+      userId: hostRow.userId,
+      type: 'agent_updated',
+      severity: 'info',
+      title: `${hostRow.name}: agent updated`,
+      ...(update.fromVersion
+        ? { body: `${update.fromVersion} → ${update.toVersion}.` }
+        : { body: `Now on ${update.toVersion}.` }),
+      relatedHostId: hostRow.id,
+    })
+    return
+  }
+
+  if (p.phase === 'failed' || p.phase === 'rolled_back') {
+    await db
+      .update(agentUpdates)
+      .set({
+        status: p.phase === 'rolled_back' ? 'rolled_back' : 'failed',
+        completedAt: new Date(),
+        errorMessage: p.error?.slice(0, 1000) ?? null,
+      })
+      .where(eq(agentUpdates.id, p.updateId))
+    void createNotification({
+      userId: hostRow.userId,
+      type: 'agent_update_failed',
+      severity: 'error',
+      title:
+        p.phase === 'rolled_back'
+          ? `${hostRow.name}: update rolled back`
+          : `${hostRow.name}: agent update failed`,
+      ...(p.error ? { body: p.error.slice(0, 1000) } : {}),
+      relatedHostId: hostRow.id,
+    })
+    return
+  }
+
+  // Mid-flight phase — log only.
+  logger.info({ hostId: conn.hostId, updateId: p.updateId, phase: p.phase }, 'agent update phase')
 }
 
 async function handleBackupProgress(

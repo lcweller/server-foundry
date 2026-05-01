@@ -200,11 +200,21 @@ Backlog:
 
 ## Phase 10: Agent self-update (3-5 days)
 
-- [ ] Agent version endpoint
-- [ ] Platform pushes update command
-- [ ] Agent downloads, verifies signature, swaps, restarts
-- [ ] Health check rollback
-- [ ] Update history per host
+Committed:
+- [x] Schema: `agent_updates` (migration 0007) + `agent_update_status` enum
+- [x] Manifest endpoint `GET /api/agent/update-manifest` (env-driven: AGENT_UPDATE_VERSION, AGENT_UPDATE_DOWNLOAD_URL, AGENT_UPDATE_SIGNATURE, AGENT_UPDATE_SHA256)
+- [x] Server Action `triggerAgentUpdate` — owner-checked, dispatches `update_agent` to the connected agent
+- [x] Protocol additions: `update_agent` (platform→agent), `agent_update_progress` (agent→platform; phases include staged/completed/failed/rolled_back)
+- [x] Agent: streaming download with sha-256 hash, ed25519 signature verify (FOUNDRY_UPDATE_PUBLIC_KEY), tar -xzf into /opt/foundry-agent.new, drop pending marker
+- [x] Privilege-separated swap: foundry-agent-swap.path watches the marker file, foundry-agent-swap.service runs as root and does stop → swap → start → 45s health-check → rollback if the new build fails to come online
+- [x] Update history UI on host detail (current version + manifest pull + Update agent confirm dialog + status list)
+- [x] Notifications: `agent_updated` + `agent_update_failed` (Phase 8 wiring)
+
+Backlog:
+- [ ] Real signing pipeline (CI generates ed25519 sigs over the tarball sha256, publishes both to a CDN). Today the manifest fields are env-driven; signing is documented in docs/security.md but not yet automated
+- [ ] In-flight progress percentage during download (we report at phase boundaries only)
+- [ ] Multi-architecture tarballs (amd64 only for now)
+- [ ] Agent-side polling against /api/agent/update-manifest so out-of-band updates can land without a dashboard click
 
 ## Phase 11: Security hardening (1 week)
 

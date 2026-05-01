@@ -133,6 +133,30 @@ export const restoreProgressMessage = baseEnvelope.extend({
   }),
 })
 
+// agent_update_progress — phases include 'staged' (download done +
+// signature verified, swap is the next external step), 'completed'
+// (the new agent has reconnected and is reporting), 'failed' (any
+// pre-swap error), and 'rolled_back' (swap script flipped back to the
+// previous version after the new build failed its health check).
+export const agentUpdateProgressMessage = baseEnvelope.extend({
+  type: z.literal('agent_update_progress'),
+  payload: z.object({
+    updateId: z.string().uuid(),
+    phase: z.enum([
+      'queued',
+      'downloading',
+      'verifying',
+      'staged',
+      'completed',
+      'failed',
+      'rolled_back',
+    ]),
+    error: z.string().max(1024).optional(),
+    fromVersion: z.string().max(64).optional(),
+    toVersion: z.string().max(64).optional(),
+  }),
+})
+
 export const agentToPlatformMessage = z.discriminatedUnion('type', [
   helloMessage,
   heartbeatMessage,
@@ -143,6 +167,7 @@ export const agentToPlatformMessage = z.discriminatedUnion('type', [
   terminalClosedMessage,
   backupProgressMessage,
   restoreProgressMessage,
+  agentUpdateProgressMessage,
 ])
 
 // ─── platform → agent ──────────────────────────────────────────────
@@ -263,6 +288,25 @@ export const restoreServerMessage = baseEnvelope.extend({
   }),
 })
 
+// update_agent — kicks off the staged self-update flow on the host.
+// signature is base64-encoded ed25519 over the tarball SHA-256 digest;
+// agents validate against the public key embedded at install time.
+// When no public key is configured, the agent logs a warning and
+// proceeds (development mode).
+export const updateAgentMessage = baseEnvelope.extend({
+  type: z.literal('update_agent'),
+  payload: z.object({
+    updateId: z.string().uuid(),
+    version: z.string().min(1).max(64),
+    downloadUrl: z.string().url(),
+    signature: z.string().max(512).optional(),
+    sha256: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/i)
+      .optional(),
+  }),
+})
+
 export const platformToAgentMessage = z.discriminatedUnion('type', [
   helloAckMessage,
   errorMessage,
@@ -277,6 +321,7 @@ export const platformToAgentMessage = z.discriminatedUnion('type', [
   terminalCloseMessage,
   backupServerMessage,
   restoreServerMessage,
+  updateAgentMessage,
 ])
 
 // ─── Inferred TS types ─────────────────────────────────────────────
@@ -290,6 +335,7 @@ export type TerminalDataMessage = z.infer<typeof terminalDataMessage>
 export type TerminalClosedMessage = z.infer<typeof terminalClosedMessage>
 export type BackupProgressMessage = z.infer<typeof backupProgressMessage>
 export type RestoreProgressMessage = z.infer<typeof restoreProgressMessage>
+export type AgentUpdateProgressMessage = z.infer<typeof agentUpdateProgressMessage>
 export type AgentToPlatformMessage = z.infer<typeof agentToPlatformMessage>
 
 export type HelloAckMessage = z.infer<typeof helloAckMessage>
@@ -305,6 +351,7 @@ export type TerminalResizeMessage = z.infer<typeof terminalResizeMessage>
 export type TerminalCloseMessage = z.infer<typeof terminalCloseMessage>
 export type BackupServerMessage = z.infer<typeof backupServerMessage>
 export type RestoreServerMessage = z.infer<typeof restoreServerMessage>
+export type UpdateAgentMessage = z.infer<typeof updateAgentMessage>
 export type PlatformToAgentMessage = z.infer<typeof platformToAgentMessage>
 
 // ─── Constants ─────────────────────────────────────────────────────

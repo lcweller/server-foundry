@@ -50,6 +50,13 @@
       "when": 1777607574517,
       "tag": "0006_groovy_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777608375861,
+      "tag": "0007_workable_ben_parker",
+      "breakpoints": true
     }
   ]
 }

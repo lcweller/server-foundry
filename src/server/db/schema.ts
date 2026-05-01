@@ -43,6 +43,13 @@ export const backupStatusEnum = pgEnum('backup_status', ['running', 'completed',
 
 export const backupDestinationEnum = pgEnum('backup_destination', ['platform', 's3'])
 
+export const agentUpdateStatusEnum = pgEnum('agent_update_status', [
+  'running',
+  'completed',
+  'failed',
+  'rolled_back',
+])
+
 export const notificationTypeEnum = pgEnum('notification_type', [
   'host_online',
   'host_offline',
@@ -381,6 +388,35 @@ export const backups = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// agent_updates — per-host agent self-update history (Phase 10)
+//
+// One row per attempted update. Rows in 'running' state are reconciled
+// when the agent posts agent_update_progress with a terminal phase.
+// Failed updates that the host's swap script reverts land as
+// 'rolled_back'.
+// ─────────────────────────────────────────────────────────────────────
+
+export const agentUpdates = pgTable(
+  'agent_updates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hostId: uuid('host_id')
+      .notNull()
+      .references(() => hosts.id, { onDelete: 'cascade' }),
+    fromVersion: text('from_version'),
+    toVersion: text('to_version').notNull(),
+    downloadUrl: text('download_url').notNull(),
+    status: agentUpdateStatusEnum('status').notNull().default('running'),
+    errorMessage: text('error_message'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    byHostStarted: index('agent_updates_host_started_idx').on(table.hostId, table.startedAt.desc()),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // notifications — in-app feed + (opt-in) email (Phase 8)
 //
 // Soft-delete via deleted_at so dismissed notifications can be
@@ -490,6 +526,8 @@ export type BackupConfig = typeof backupConfigs.$inferSelect
 export type NewBackupConfig = typeof backupConfigs.$inferInsert
 export type BackupStatus = (typeof backupStatusEnum.enumValues)[number]
 export type BackupDestination = (typeof backupDestinationEnum.enumValues)[number]
+export type AgentUpdate = typeof agentUpdates.$inferSelect
+export type NewAgentUpdate = typeof agentUpdates.$inferInsert
+export type AgentUpdateStatus = (typeof agentUpdateStatusEnum.enumValues)[number]
 
-// Notes on tables intentionally NOT defined here (introduced in later phases):
-//   agent_updates
+// All planned tables now exist.

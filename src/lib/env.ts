@@ -34,6 +34,17 @@ const envSchema = z.object({
   // Agent — required for Phase 4+
   AGENT_HMAC_SECRET: z.string().optional(),
   BACKUP_ENCRYPTION_KEY: z.string().optional(),
+
+  // Agent self-update (Phase 10) — recommended version + signed
+  // download URL. Optional; when unset the manifest endpoint returns
+  // the current AGENT_VERSION constant with no upgrade target.
+  AGENT_UPDATE_VERSION: z.string().max(64).optional(),
+  AGENT_UPDATE_DOWNLOAD_URL: z.string().url().optional(),
+  AGENT_UPDATE_SIGNATURE: z.string().max(512).optional(),
+  AGENT_UPDATE_SHA256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i)
+    .optional(),
 })
 
 export type Env = z.infer<typeof envSchema>
