@@ -39,6 +39,10 @@ export const notificationSeverityEnum = pgEnum('notification_severity', [
 // Notification types — closed list, expanded as new event sources land.
 // Order is roughly grouped by source (host, agent, server, backup,
 // resource, security).
+export const backupStatusEnum = pgEnum('backup_status', ['running', 'completed', 'failed'])
+
+export const backupDestinationEnum = pgEnum('backup_destination', ['platform', 's3'])
+
 export const notificationTypeEnum = pgEnum('notification_type', [
   'host_online',
   'host_offline',
@@ -329,6 +333,54 @@ export const gameServerLogs = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// backup_configs — per-server backup schedule + destination (Phase 9)
+//
+// One row per game_server. destination_config_json is encrypted with
+// BACKUP_ENCRYPTION_KEY when destination_type='s3' (so an attacker who
+// gets read access to the DB still can't lift S3 keys out).
+// ─────────────────────────────────────────────────────────────────────
+
+export const backupConfigs = pgTable('backup_configs', {
+  serverId: uuid('server_id')
+    .primaryKey()
+    .references(() => gameServers.id, { onDelete: 'cascade' }),
+  isEnabled: boolean('is_enabled').notNull().default(false),
+  scheduleCron: text('schedule_cron'),
+  retentionCount: integer('retention_count').notNull().default(7),
+  destinationType: backupDestinationEnum('destination_type').notNull().default('platform'),
+  // Opaque encrypted JSON when destination_type='s3'. Null for platform
+  // destination (which has no per-user config in v1).
+  destinationConfigJson: jsonb('destination_config_json'),
+  lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─────────────────────────────────────────────────────────────────────
+// backups — backup history (Phase 9)
+// ─────────────────────────────────────────────────────────────────────
+
+export const backups = pgTable(
+  'backups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+      .notNull()
+      .references(() => gameServers.id, { onDelete: 'cascade' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    sizeBytes: bigint('size_bytes', { mode: 'bigint' }),
+    storageUrl: text('storage_url'),
+    status: backupStatusEnum('status').notNull().default('running'),
+    errorMessage: text('error_message'),
+    retentionUntil: timestamp('retention_until', { withTimezone: true }),
+    triggeredBy: text('triggered_by'), // 'manual' | 'scheduled'
+  },
+  (table) => ({
+    byServerStarted: index('backups_server_started_idx').on(table.serverId, table.startedAt.desc()),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // notifications — in-app feed + (opt-in) email (Phase 8)
 //
 // Soft-delete via deleted_at so dismissed notifications can be
@@ -432,6 +484,12 @@ export type NotificationPreference = typeof notificationPreferences.$inferSelect
 export type NewNotificationPreference = typeof notificationPreferences.$inferInsert
 export type NotificationType = (typeof notificationTypeEnum.enumValues)[number]
 export type NotificationSeverity = (typeof notificationSeverityEnum.enumValues)[number]
+export type Backup = typeof backups.$inferSelect
+export type NewBackup = typeof backups.$inferInsert
+export type BackupConfig = typeof backupConfigs.$inferSelect
+export type NewBackupConfig = typeof backupConfigs.$inferInsert
+export type BackupStatus = (typeof backupStatusEnum.enumValues)[number]
+export type BackupDestination = (typeof backupDestinationEnum.enumValues)[number]
 
 // Notes on tables intentionally NOT defined here (introduced in later phases):
-//   backups, backup_configs, agent_updates
+//   agent_updates

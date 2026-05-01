@@ -4,7 +4,14 @@ import type { IncomingMessage } from 'node:http'
 import { logger } from '@/lib/logger'
 import { hashAgentToken, isAgentTokenSignatureValid } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
-import { gameServerLogs, gameServers, hostLogs, hostMetricsHourly, hosts } from '@/server/db/schema'
+import {
+  backups,
+  gameServerLogs,
+  gameServers,
+  hostLogs,
+  hostMetricsHourly,
+  hosts,
+} from '@/server/db/schema'
 import { createNotification } from '@/server/notifications/create'
 import {
   type AgentToPlatformMessage,
@@ -157,7 +164,108 @@ async function dispatch(conn: ConnectedAgent, msg: AgentToPlatformMessage) {
     case 'terminal_closed':
       terminalSessions.forwardClosed(msg)
       return
+    case 'backup_progress':
+      return handleBackupProgress(conn, msg)
+    case 'restore_progress':
+      return handleRestoreProgress(conn, msg)
   }
+}
+
+async function handleBackupProgress(
+  conn: ConnectedAgent,
+  msg: Extract<AgentToPlatformMessage, { type: 'backup_progress' }>,
+) {
+  const p = msg.payload
+  // Verify this backup belongs to a server on the connecting host.
+  const rows = await db
+    .select({ serverId: backups.serverId, hostId: gameServers.hostId, name: gameServers.name })
+    .from(backups)
+    .innerJoin(gameServers, eq(gameServers.id, backups.serverId))
+    .where(and(eq(backups.id, p.backupId), eq(gameServers.hostId, conn.hostId)))
+    .limit(1)
+  if (!rows[0]) {
+    logger.warn({ hostId: conn.hostId, backupId: p.backupId }, 'backup_progress for unknown row')
+    return
+  }
+  const { serverId, name } = rows[0]
+
+  if (p.phase === 'completed') {
+    await db
+      .update(backups)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        ...(typeof p.bytesSoFar === 'number' ? { sizeBytes: BigInt(p.bytesSoFar) } : {}),
+        ...(p.storageUrl ? { storageUrl: p.storageUrl } : {}),
+      })
+      .where(eq(backups.id, p.backupId))
+    void createNotification({
+      userId: conn.userId,
+      type: 'backup_completed',
+      severity: 'info',
+      title: `${name}: backup completed`,
+      ...(typeof p.bytesSoFar === 'number'
+        ? { body: `Archive size: ${formatBytes(p.bytesSoFar)}.` }
+        : {}),
+      relatedHostId: conn.hostId,
+      relatedServerId: serverId,
+    })
+    return
+  }
+
+  if (p.phase === 'failed') {
+    await db
+      .update(backups)
+      .set({
+        status: 'failed',
+        completedAt: new Date(),
+        errorMessage: p.error?.slice(0, 1000) ?? 'Backup failed.',
+      })
+      .where(eq(backups.id, p.backupId))
+    void createNotification({
+      userId: conn.userId,
+      type: 'backup_failed',
+      severity: 'error',
+      title: `${name}: backup failed`,
+      ...(p.error ? { body: p.error.slice(0, 1000) } : {}),
+      relatedHostId: conn.hostId,
+      relatedServerId: serverId,
+    })
+    return
+  }
+
+  // Mid-flight — record the byte counter so the UI can show progress.
+  if (typeof p.bytesSoFar === 'number') {
+    await db
+      .update(backups)
+      .set({ sizeBytes: BigInt(p.bytesSoFar) })
+      .where(eq(backups.id, p.backupId))
+  }
+}
+
+async function handleRestoreProgress(
+  conn: ConnectedAgent,
+  msg: Extract<AgentToPlatformMessage, { type: 'restore_progress' }>,
+) {
+  // v1: just log. The user can watch the server status flip back to
+  // running on success. Phase 12 / dashboard polish lands a richer
+  // restore UI.
+  logger.info(
+    {
+      hostId: conn.hostId,
+      backupId: msg.payload.backupId,
+      phase: msg.payload.phase,
+      bytesSoFar: msg.payload.bytesSoFar,
+    },
+    'restore progress',
+  )
+}
+
+function formatBytes(n: number): string {
+  if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`
+  if (n >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(1)} MB`
+  if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`
+  return `${n} B`
 }
 
 async function handleLog(

@@ -106,6 +106,33 @@ export const terminalClosedMessage = baseEnvelope.extend({
   }),
 })
 
+// backup_progress: streaming status from the agent during a backup or
+// restore. The terminal phases ('completed', 'failed') trigger row
+// finalisation + a backup_completed/backup_failed notification on the
+// platform side.
+export const backupProgressMessage = baseEnvelope.extend({
+  type: z.literal('backup_progress'),
+  payload: z.object({
+    backupId: z.string().uuid(),
+    phase: z.enum(['queued', 'archiving', 'uploading', 'completed', 'failed']),
+    bytesSoFar: z.number().int().nonnegative().optional(),
+    totalBytes: z.number().int().nonnegative().optional(),
+    storageUrl: z.string().max(2048).optional(),
+    error: z.string().max(1024).optional(),
+  }),
+})
+
+export const restoreProgressMessage = baseEnvelope.extend({
+  type: z.literal('restore_progress'),
+  payload: z.object({
+    backupId: z.string().uuid(),
+    phase: z.enum(['queued', 'downloading', 'extracting', 'completed', 'failed']),
+    bytesSoFar: z.number().int().nonnegative().optional(),
+    totalBytes: z.number().int().nonnegative().optional(),
+    error: z.string().max(1024).optional(),
+  }),
+})
+
 export const agentToPlatformMessage = z.discriminatedUnion('type', [
   helloMessage,
   heartbeatMessage,
@@ -114,6 +141,8 @@ export const agentToPlatformMessage = z.discriminatedUnion('type', [
   deploymentProgressMessage,
   terminalDataMessage,
   terminalClosedMessage,
+  backupProgressMessage,
+  restoreProgressMessage,
 ])
 
 // ─── platform → agent ──────────────────────────────────────────────
@@ -198,6 +227,42 @@ export const terminalCloseMessage = baseEnvelope.extend({
   payload: z.object({ sessionId: z.string().uuid() }),
 })
 
+// S3-style destination credentials. region is optional for non-AWS
+// providers (Backblaze B2, Wasabi, MinIO etc.) that may not need it.
+const s3DestinationSchema = z.object({
+  type: z.literal('s3'),
+  bucket: z.string().min(1).max(64),
+  region: z.string().max(64).optional(),
+  endpoint: z.string().url().optional(),
+  accessKeyId: z.string().min(8).max(128),
+  secretAccessKey: z.string().min(8).max(256),
+})
+
+const platformDestinationSchema = z.object({
+  type: z.literal('platform'),
+  uploadUrl: z.string().url(), // pre-signed URL the platform issues
+})
+
+export const backupServerMessage = baseEnvelope.extend({
+  type: z.literal('backup_server'),
+  payload: z.object({
+    backupId: z.string().uuid(),
+    serverId: z.string().uuid(),
+    objectKey: z.string().min(1).max(512),
+    destination: z.discriminatedUnion('type', [s3DestinationSchema, platformDestinationSchema]),
+  }),
+})
+
+export const restoreServerMessage = baseEnvelope.extend({
+  type: z.literal('restore_server'),
+  payload: z.object({
+    backupId: z.string().uuid(),
+    serverId: z.string().uuid(),
+    objectKey: z.string().min(1).max(512),
+    destination: z.discriminatedUnion('type', [s3DestinationSchema, platformDestinationSchema]),
+  }),
+})
+
 export const platformToAgentMessage = z.discriminatedUnion('type', [
   helloAckMessage,
   errorMessage,
@@ -210,6 +275,8 @@ export const platformToAgentMessage = z.discriminatedUnion('type', [
   terminalInputMessage,
   terminalResizeMessage,
   terminalCloseMessage,
+  backupServerMessage,
+  restoreServerMessage,
 ])
 
 // ─── Inferred TS types ─────────────────────────────────────────────
@@ -221,6 +288,8 @@ export type ServerStatusChangeMessage = z.infer<typeof serverStatusChangeMessage
 export type DeploymentProgressMessage = z.infer<typeof deploymentProgressMessage>
 export type TerminalDataMessage = z.infer<typeof terminalDataMessage>
 export type TerminalClosedMessage = z.infer<typeof terminalClosedMessage>
+export type BackupProgressMessage = z.infer<typeof backupProgressMessage>
+export type RestoreProgressMessage = z.infer<typeof restoreProgressMessage>
 export type AgentToPlatformMessage = z.infer<typeof agentToPlatformMessage>
 
 export type HelloAckMessage = z.infer<typeof helloAckMessage>
@@ -234,6 +303,8 @@ export type TerminalOpenMessage = z.infer<typeof terminalOpenMessage>
 export type TerminalInputMessage = z.infer<typeof terminalInputMessage>
 export type TerminalResizeMessage = z.infer<typeof terminalResizeMessage>
 export type TerminalCloseMessage = z.infer<typeof terminalCloseMessage>
+export type BackupServerMessage = z.infer<typeof backupServerMessage>
+export type RestoreServerMessage = z.infer<typeof restoreServerMessage>
 export type PlatformToAgentMessage = z.infer<typeof platformToAgentMessage>
 
 // ─── Constants ─────────────────────────────────────────────────────

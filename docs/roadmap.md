@@ -182,12 +182,21 @@ Backlog (deferred):
 
 ## Phase 9: Backups (1 week)
 
-- [ ] Per-server backup config
-- [ ] On-demand backup
-- [ ] Scheduled backups (cron)
-- [ ] Restore flow
-- [ ] S3 destination support (user provides credentials, encrypted at rest)
-- [ ] Platform-provided storage with quota (future, requires storage strategy)
+Committed:
+- [x] Schema: `backups` + `backup_configs` (migration 0006, status + destination enums, encrypted destination JSON)
+- [x] Per-server backup config (form on server detail page)
+- [x] On-demand backup (Back up now button + `triggerBackup` action)
+- [x] Scheduled backups via in-process cron loop in `server.ts` (5-field spec, lastRunAt throttle, retention sweep)
+- [x] Restore flow (confirmation dialog → `restoreBackup` action → agent unpacks tarball over installDir)
+- [x] S3 destination support — user-provided credentials encrypted at rest with AES-256-GCM (BACKUP_ENCRYPTION_KEY). `aws4fetch` on the agent does single-PUT/GET with SigV4
+- [x] Backup completion notifications (`backup_completed` / `backup_failed` wired into Phase 8)
+
+Backlog:
+- [ ] Multipart upload for backups >5 GiB (S3 single-PUT limit). ARK + 7DTD will hit this
+- [ ] Platform-provided storage (requires the platform to operate its own object store + per-user quota)
+- [ ] Pre-backup pause / post-restore start orchestration (currently snapshots live install dir; correct approach is to stop the server first)
+- [ ] Object-side delete on retention expiry (today only the DB row is removed)
+- [ ] Streaming progress percentage during upload (we report bytesSoFar at completion only)
 
 ## Phase 10: Agent self-update (3-5 days)
 

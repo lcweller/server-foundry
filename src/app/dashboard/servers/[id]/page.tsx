@@ -1,5 +1,6 @@
 import { LiveLogsPanel } from '@/components/app/live-logs'
 import { ServerStatusBadge } from '@/components/app/server-status-pip'
+import { listBackups, loadBackupConfig } from '@/server/actions/backups'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
 import {
@@ -11,6 +12,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { BackupsSection } from './backups-section'
 import { ServerControls } from './server-controls'
 
 export const metadata: Metadata = {
@@ -57,6 +59,32 @@ export default async function ServerDetailPage({ params }: Props) {
   const { server, game, host } = row
 
   const hostOnline = host.status === 'online'
+
+  const [backupRows, backupConfig] = await Promise.all([
+    listBackups(server.id),
+    loadBackupConfig(server.id),
+  ])
+  const backupItems = backupRows.map((b) => ({
+    id: b.id,
+    startedAt: b.startedAt.toISOString(),
+    completedAt: b.completedAt ? b.completedAt.toISOString() : null,
+    status: b.status,
+    sizeBytes: b.sizeBytes != null ? b.sizeBytes.toString() : null,
+    storageUrl: b.storageUrl,
+    errorMessage: b.errorMessage,
+    triggeredBy: b.triggeredBy,
+  }))
+  const backupConfigSnapshot = backupConfig
+    ? {
+        isEnabled: backupConfig.isEnabled,
+        scheduleCron: backupConfig.scheduleCron,
+        retentionCount: backupConfig.retentionCount,
+        destinationType: backupConfig.destinationType,
+        hasS3Credentials:
+          backupConfig.destinationType === 's3' &&
+          typeof backupConfig.destinationConfigJson === 'string',
+      }
+    : null
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
@@ -119,6 +147,19 @@ export default async function ServerDetailPage({ params }: Props) {
               value={game.recRamMb ? `${game.recRamMb} MB` : '—'}
             />
           </dl>
+        </section>
+
+        <section>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Backups</p>
+          <p className="mt-2 mb-4 text-xs text-text-muted">
+            Tar+gzip the install directory and ship it to your S3-compatible bucket. Schedule via
+            cron; restore from the history list.
+          </p>
+          <BackupsSection
+            serverId={server.id}
+            initialConfig={backupConfigSnapshot}
+            initialBackups={backupItems}
+          />
         </section>
 
         <section>

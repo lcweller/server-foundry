@@ -12,6 +12,7 @@
 import { type IncomingMessage, createServer } from 'node:http'
 import next from 'next'
 import { WebSocketServer } from 'ws'
+import { startBackupScheduler } from './src/server/backups/scheduler'
 import { handleAgentSocket } from './src/server/ws/agent-handler'
 import { handleTerminalSocket } from './src/server/ws/terminal-handler'
 
@@ -64,6 +65,11 @@ async function main() {
     // biome-ignore lint/suspicious/noConsole: server boot log
     console.log(`> Server Foundry ready on http://${hostname}:${port} (dev=${dev})`)
   })
+
+  // Background scheduled-backup loop. Single-process; safe to run from
+  // every Next instance because triggerBackup is idempotent on the
+  // per-minute window (lastRunAt throttle).
+  startBackupScheduler()
 }
 
 main().catch((err) => {
