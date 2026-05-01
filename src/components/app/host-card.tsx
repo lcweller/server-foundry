@@ -1,3 +1,5 @@
+import { Callsign } from '@/components/ui/callsign'
+import { Surface } from '@/components/ui/surface'
 import type { Host } from '@/server/db/schema'
 import Link from 'next/link'
 import { StatusPip } from './status-pip'
@@ -31,34 +33,41 @@ export function HostCard({ host }: Props) {
   return (
     <Link
       href={`/dashboard/hosts/${host.id}`}
-      className="group block rounded-md border border-border bg-surface p-5 transition-colors hover:bg-surface-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="truncate font-serif text-xl text-text">{host.name}</p>
-          <p className="mt-1 truncate font-mono text-xs text-text-muted">{host.hostname || '—'}</p>
+      <Surface variant="interactive" className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <Callsign id={host.id} className="text-accent" />
+            <p className="mt-2 truncate text-xl text-text">{host.name}</p>
+            <p className="mt-1 truncate font-mono text-xs text-text-muted">
+              {host.hostname || '—'}
+            </p>
+          </div>
+          <StatusPip status={host.status} />
         </div>
-        <StatusPip status={host.status} />
-      </div>
 
-      <dl className="mt-6 grid grid-cols-3 gap-4 text-xs">
-        <div>
-          <dt className="font-mono uppercase tracking-[0.15em] text-text-faint">OS</dt>
-          <dd className="mt-1 truncate text-text-muted">{host.os || '—'}</dd>
-        </div>
-        <div>
-          <dt className="font-mono uppercase tracking-[0.15em] text-text-faint">CPU</dt>
-          <dd className="mt-1 text-text-muted">{host.cpuCores ? `${host.cpuCores} cores` : '—'}</dd>
-        </div>
-        <div>
-          <dt className="font-mono uppercase tracking-[0.15em] text-text-faint">RAM</dt>
-          <dd className="mt-1 text-text-muted">{formatBytes(host.ramBytes)}</dd>
-        </div>
-      </dl>
+        <dl className="mt-6 grid grid-cols-3 gap-4 text-xs">
+          <div>
+            <dt className="font-mono uppercase tracking-[0.15em] text-text-faint">OS</dt>
+            <dd className="mt-1 truncate text-text-muted">{host.os || '—'}</dd>
+          </div>
+          <div>
+            <dt className="font-mono uppercase tracking-[0.15em] text-text-faint">CPU</dt>
+            <dd className="mt-1 text-text-muted">
+              {host.cpuCores ? `${host.cpuCores} cores` : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-mono uppercase tracking-[0.15em] text-text-faint">RAM</dt>
+            <dd className="mt-1 text-text-muted">{formatBytes(host.ramBytes)}</dd>
+          </div>
+        </dl>
 
-      <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">
-        Last seen {formatRelativeTime(host.lastSeenAt)}
-      </p>
+        <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">
+          Last seen {formatRelativeTime(host.lastSeenAt)}
+        </p>
+      </Surface>
     </Link>
   )
 }
