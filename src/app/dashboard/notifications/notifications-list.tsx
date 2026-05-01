@@ -107,7 +107,7 @@ export function NotificationsList({ items }: { items: Item[] }) {
               <li key={item.id} className="flex flex-wrap items-start gap-4 px-5 py-4">
                 <span
                   className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                    unread ? 'bg-ember' : 'bg-text-faint'
+                    unread ? 'bg-accent' : 'bg-text-faint'
                   }`}
                   aria-label={unread ? 'Unread' : 'Read'}
                 />

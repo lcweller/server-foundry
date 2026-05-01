@@ -100,7 +100,7 @@ export default async function ServerDetailPage({ params }: Props) {
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-faint">
             {game.name}
           </p>
-          <h1 className="mt-2 truncate font-serif text-3xl leading-tight tracking-tight text-text sm:text-4xl">
+          <h1 className="mt-2 truncate text-3xl leading-tight tracking-tight text-text sm:text-4xl">
             {server.name}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">

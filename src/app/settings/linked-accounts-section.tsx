@@ -69,7 +69,7 @@ export function LinkedAccountsSection({ linkedProviders }: { linkedProviders: st
                   type="button"
                   onClick={() => link(p.id)}
                   disabled={pending === p.id}
-                  className="h-9 rounded-md bg-ember px-3 text-xs font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-60"
+                  className="h-9 rounded-md bg-accent px-3 text-xs font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-60"
                 >
                   {pending === p.id ? 'Linking…' : 'Link'}
                 </button>

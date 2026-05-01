@@ -155,14 +155,14 @@ function Stat({
   return (
     <div className="rounded-md border border-border bg-surface p-4">
       <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">{label}</p>
-      <p className="mt-2 font-serif text-2xl text-text">{value}</p>
+      <p className="mt-2 text-2xl text-text">{value}</p>
       <div
         aria-hidden="true"
         className="relative mt-3 h-1 w-full overflow-hidden rounded-full bg-border"
       >
         {fillPercent != null ? (
           <div
-            className={`absolute inset-y-0 left-0 transition-[width] duration-500 ${danger ? 'bg-danger' : 'bg-ember'}`}
+            className={`absolute inset-y-0 left-0 transition-[width] duration-500 ${danger ? 'bg-danger' : 'bg-accent'}`}
             style={{ width: `${fill}%` }}
           />
         ) : null}

@@ -182,7 +182,7 @@ export function NotificationsSection({ preferences }: Props) {
                   type="checkbox"
                   checked={cur.inApp}
                   onChange={(e) => toggle(meta.type, 'inApp', e.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-background accent-ember"
+                  className="h-4 w-4 rounded border-border bg-background accent-accent"
                 />
                 In-app
               </label>
@@ -191,7 +191,7 @@ export function NotificationsSection({ preferences }: Props) {
                   type="checkbox"
                   checked={cur.email}
                   onChange={(e) => toggle(meta.type, 'email', e.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-background accent-ember"
+                  className="h-4 w-4 rounded border-border bg-background accent-accent"
                 />
                 Email
               </label>
@@ -205,7 +205,7 @@ export function NotificationsSection({ preferences }: Props) {
           type="button"
           onClick={onSave}
           disabled={pending}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-ember px-5 text-xs font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-xs font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-60"
         >
           {pending ? 'Saving…' : 'Save preferences'}
         </button>

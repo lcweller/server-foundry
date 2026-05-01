@@ -57,7 +57,7 @@ export function DeployFlow({ hostId, hostName, games }: Props) {
       <div className="rounded-md border border-border bg-surface p-8 text-sm text-text-muted">
         <p className="text-text">No games available yet.</p>
         <p className="mt-2">
-          Run <code className="font-mono text-xs text-ember">bun run db:seed</code> to populate the
+          Run <code className="font-mono text-xs text-accent">bun run db:seed</code> to populate the
           catalog.
         </p>
       </div>
@@ -137,11 +137,11 @@ export function DeployFlow({ hostId, hostName, games }: Props) {
                   onClick={() => setSelectedId(game.id)}
                   className={`w-full rounded-md border p-4 text-left transition-colors ${
                     active
-                      ? 'border-ember bg-surface-elevated'
+                      ? 'border-accent bg-surface-elevated'
                       : 'border-border bg-background hover:border-text-muted'
                   }`}
                 >
-                  <p className="font-serif text-lg text-text">{game.name}</p>
+                  <p className="text-lg text-text">{game.name}</p>
                   {game.description ? (
                     <p className="mt-1 text-xs text-text-muted">{game.description}</p>
                   ) : null}
@@ -175,7 +175,7 @@ export function DeployFlow({ hostId, hostName, games }: Props) {
                 required
                 maxLength={64}
                 defaultValue={`${selected.name} on ${hostName}`}
-                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-text outline-none focus:border-ember"
+                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-text outline-none focus:border-accent"
               />
             </Field>
 
@@ -191,7 +191,7 @@ export function DeployFlow({ hostId, hostName, games }: Props) {
                 min={1}
                 max={65535}
                 defaultValue={selected.defaultPort}
-                className="h-10 w-32 rounded-md border border-border bg-background px-3 font-mono text-sm text-text outline-none focus:border-ember"
+                className="h-10 w-32 rounded-md border border-border bg-background px-3 font-mono text-sm text-text outline-none focus:border-accent"
               />
             </Field>
 
@@ -211,7 +211,7 @@ export function DeployFlow({ hostId, hostName, games }: Props) {
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-11 items-center justify-center rounded-md bg-ember px-6 text-sm font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {pending ? 'Deploying…' : `Deploy ${selected.name}`}
           </button>
@@ -264,7 +264,7 @@ function ConfigInput({ field }: { field: ConfigField }) {
           name={`config.${field.key}`}
           type="checkbox"
           defaultChecked={field.default ?? false}
-          className="mt-1 h-4 w-4 rounded border-border bg-background accent-ember"
+          className="mt-1 h-4 w-4 rounded border-border bg-background accent-accent"
         />
         <div>
           <label htmlFor={id} className="text-sm text-text">
@@ -287,7 +287,7 @@ function ConfigInput({ field }: { field: ConfigField }) {
         pattern={field.pattern}
         placeholder={field.placeholder}
         defaultValue={field.default ?? ''}
-        className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-text outline-none focus:border-ember"
+        className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-text outline-none focus:border-accent"
       />
     </Field>
   )

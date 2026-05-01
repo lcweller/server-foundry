@@ -144,7 +144,7 @@ function ActionButton({
     'inline-flex h-10 items-center justify-center rounded-md px-5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40'
   const variantClass =
     variant === 'primary'
-      ? 'bg-ember text-background hover:bg-ember-soft'
+      ? 'bg-accent text-background hover:bg-accent-soft'
       : 'border border-border bg-surface-elevated text-text hover:bg-background'
   return (
     <button

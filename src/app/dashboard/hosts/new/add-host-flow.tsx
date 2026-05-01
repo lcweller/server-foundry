@@ -35,7 +35,7 @@ export function AddHostFlow() {
     return (
       <div className="rounded-md border border-border bg-surface p-8">
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Step 1 of 2</p>
-        <h2 className="mt-3 font-serif text-2xl text-text">Generate a pairing code.</h2>
+        <h2 className="mt-3 text-2xl text-text">Generate a pairing code.</h2>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-muted">
           The code expires in 15 minutes and works once. We’ll show the install command after it’s
           generated.
@@ -45,7 +45,7 @@ export function AddHostFlow() {
           type="button"
           onClick={generate}
           disabled={pending}
-          className="mt-8 inline-flex h-11 items-center justify-center rounded-md bg-ember px-6 text-sm font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-60 disabled:cursor-not-allowed"
+          className="mt-8 inline-flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {pending ? 'Generating…' : 'Generate code'}
         </button>
@@ -148,7 +148,7 @@ function PairingCodeView({
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
           Step 2 of 2 — Install
         </p>
-        <h2 className="mt-3 font-serif text-2xl text-text">Run this on your Linux host.</h2>
+        <h2 className="mt-3 text-2xl text-text">Run this on your Linux host.</h2>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-muted">
           The agent installs as a systemd service, connects out, and shows up on your dashboard.
         </p>

@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import type { ServerStatus } from '@/server/db/schema'
 
 const statusMap: Record<ServerStatus, { label: string; dot: string; text: string }> = {
-  deploying: { label: 'Deploying', dot: 'bg-ember animate-pulse', text: 'text-ember' },
+  deploying: { label: 'Deploying', dot: 'bg-info animate-pulse', text: 'text-info' },
   running: { label: 'Running', dot: 'bg-success', text: 'text-success' },
   stopped: { label: 'Stopped', dot: 'bg-text-faint', text: 'text-text-muted' },
   crashed: { label: 'Crashed', dot: 'bg-danger', text: 'text-danger' },

@@ -67,13 +67,11 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-16">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
-        <span className="text-ember">00</span>
+        <span className="text-accent">00</span>
         <span className="mx-2 text-text-faint">·</span>
         <span>Settings</span>
       </p>
-      <h1 className="mt-4 font-serif text-3xl leading-tight tracking-tight text-text sm:text-4xl">
-        Account.
-      </h1>
+      <h1 className="mt-4 text-3xl leading-tight tracking-tight text-text sm:text-4xl">Account.</h1>
 
       <div className="mt-12 space-y-16">
         <ProfileSection user={{ name: user.name, image: user.image ?? null }} />

@@ -18,11 +18,11 @@ export default function AddHostPage() {
       </Link>
 
       <p className="mt-8 font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
-        <span className="text-ember">01</span>
+        <span className="text-accent">01</span>
         <span className="mx-2 text-text-faint">·</span>
         <span>Add host</span>
       </p>
-      <h1 className="mt-3 font-serif text-3xl leading-tight tracking-tight text-text sm:text-4xl">
+      <h1 className="mt-3 text-3xl leading-tight tracking-tight text-text sm:text-4xl">
         Pair a Linux host.
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-text-muted">

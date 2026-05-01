@@ -100,7 +100,7 @@ export function LiveLogsPanel({ source, entityId, className }: Props) {
               type="checkbox"
               checked={follow}
               onChange={(e) => setFollow(e.target.checked)}
-              className="h-4 w-4 rounded border-border bg-background accent-ember"
+              className="h-4 w-4 rounded border-border bg-background accent-accent"
             />
             Follow
           </label>

@@ -83,7 +83,7 @@ export function BackupsSection({ serverId, initialConfig, initialBackups }: Prop
             type="button"
             onClick={onRunNow}
             disabled={pending || !config || config.destinationType === 'platform'}
-            className="inline-flex h-9 items-center justify-center rounded-md bg-ember px-4 text-xs font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-xs font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {pending ? 'Working…' : 'Back up now'}
           </button>
@@ -232,7 +232,7 @@ function BackupConfigForm({
           type="checkbox"
           name="isEnabled"
           defaultChecked={initial?.isEnabled ?? false}
-          className="h-4 w-4 rounded border-border bg-background accent-ember"
+          className="h-4 w-4 rounded border-border bg-background accent-accent"
         />
         Run backups on schedule
       </label>
@@ -244,7 +244,7 @@ function BackupConfigForm({
             name="scheduleCron"
             defaultValue={initial?.scheduleCron ?? '0 3 * * *'}
             placeholder="0 3 * * *"
-            className="h-10 w-full rounded-md border border-border bg-background px-3 font-mono text-sm text-text outline-none focus:border-ember"
+            className="h-10 w-full rounded-md border border-border bg-background px-3 font-mono text-sm text-text outline-none focus:border-accent"
           />
         </Field>
         <Field label="Retention (days)">
@@ -254,7 +254,7 @@ function BackupConfigForm({
             min={1}
             max={365}
             defaultValue={initial?.retentionCount ?? 7}
-            className="h-10 w-32 rounded-md border border-border bg-background px-3 font-mono text-sm text-text outline-none focus:border-ember"
+            className="h-10 w-32 rounded-md border border-border bg-background px-3 font-mono text-sm text-text outline-none focus:border-accent"
           />
         </Field>
       </div>
@@ -268,7 +268,7 @@ function BackupConfigForm({
               value="s3"
               checked={destType === 's3'}
               onChange={() => setDestType('s3')}
-              className="h-4 w-4 accent-ember"
+              className="h-4 w-4 accent-accent"
             />
             S3-compatible
           </label>
@@ -280,7 +280,7 @@ function BackupConfigForm({
               checked={destType === 'platform'}
               onChange={() => setDestType('platform')}
               disabled
-              className="h-4 w-4 accent-ember"
+              className="h-4 w-4 accent-accent"
             />
             Platform-managed (coming soon)
           </label>
@@ -298,7 +298,7 @@ function BackupConfigForm({
               name="bucket"
               required
               maxLength={64}
-              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-ember"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-accent"
             />
           </Field>
           <Field label="Region (optional)">
@@ -307,7 +307,7 @@ function BackupConfigForm({
               name="region"
               maxLength={64}
               placeholder="us-east-1"
-              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-ember"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-accent"
             />
           </Field>
           <Field
@@ -318,7 +318,7 @@ function BackupConfigForm({
               type="url"
               name="endpoint"
               placeholder="https://s3.us-west-002.backblazeb2.com"
-              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-ember"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-accent"
             />
           </Field>
           <Field label="Access key ID">
@@ -327,7 +327,7 @@ function BackupConfigForm({
               name="accessKeyId"
               required
               maxLength={128}
-              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-ember"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-accent"
             />
           </Field>
           <Field
@@ -344,7 +344,7 @@ function BackupConfigForm({
               required
               maxLength={256}
               autoComplete="off"
-              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-ember"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-text outline-none focus:border-accent"
             />
           </Field>
         </fieldset>
@@ -354,7 +354,7 @@ function BackupConfigForm({
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-ember px-5 text-xs font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-xs font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-50"
         >
           {pending ? 'Saving…' : 'Save backup config'}
         </button>
@@ -385,7 +385,7 @@ function Field({
 }
 
 function statusClass(status: 'running' | 'completed' | 'failed'): string {
-  if (status === 'running') return 'text-ember'
+  if (status === 'running') return 'text-accent'
   if (status === 'completed') return 'text-text'
   return 'text-danger'
 }

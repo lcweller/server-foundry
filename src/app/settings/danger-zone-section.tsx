@@ -42,7 +42,7 @@ export function DangerZoneSection() {
         <div className="space-y-4 rounded-md border border-danger/40 bg-danger/5 p-4">
           <p className="text-sm text-text">
             Type{' '}
-            <code className="rounded bg-background px-1.5 py-0.5 font-mono text-xs text-ember">
+            <code className="rounded bg-background px-1.5 py-0.5 font-mono text-xs text-accent">
               delete my account
             </code>{' '}
             to confirm.

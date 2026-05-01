@@ -98,7 +98,7 @@ export function NotificationBell() {
       >
         <BellIcon />
         {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-ember px-1 text-[10px] font-mono font-medium text-background">
+          <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-mono font-medium text-background">
             {unread > 99 ? '99+' : unread}
           </span>
         ) : null}
@@ -130,7 +130,7 @@ export function NotificationBell() {
                   <div className="flex items-start gap-3 px-4 py-3">
                     <span
                       className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                        item.readAt == null ? 'bg-ember' : 'bg-text-faint'
+                        item.readAt == null ? 'bg-accent' : 'bg-text-faint'
                       }`}
                     />
                     <div className="min-w-0 flex-1">

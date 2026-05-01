@@ -45,7 +45,7 @@ export function UserMenu({ user }: Props) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-sm font-medium text-text transition-colors hover:bg-surface-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-sm font-medium text-text transition-colors hover:bg-surface-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {user.image ? (
           <img src={user.image} alt="" className="h-full w-full rounded-full object-cover" />

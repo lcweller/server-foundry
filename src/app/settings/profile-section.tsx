@@ -57,7 +57,7 @@ export function ProfileSection({ user }: Props) {
           <button
             type="submit"
             disabled={pending}
-            className="h-10 rounded-md bg-ember px-5 text-sm font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-60 disabled:cursor-not-allowed"
+            className="h-10 rounded-md bg-accent px-5 text-sm font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {pending ? 'Saving…' : 'Save profile'}
           </button>

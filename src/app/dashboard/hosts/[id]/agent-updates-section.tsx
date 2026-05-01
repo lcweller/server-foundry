@@ -32,7 +32,7 @@ type Props = {
 }
 
 const statusClass: Record<Status, string> = {
-  running: 'text-ember',
+  running: 'text-info',
   completed: 'text-success',
   failed: 'text-danger',
   rolled_back: 'text-warning',
@@ -143,7 +143,7 @@ export function AgentUpdatesSection({ hostId, currentVersion, initialUpdates }: 
               type="button"
               onClick={() => setConfirming(true)}
               disabled={!upgradeAvailable || pending}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-ember px-4 text-xs font-medium text-background transition-colors hover:bg-ember-soft disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-xs font-medium text-background transition-colors hover:bg-accent-soft disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {upgradeAvailable ? 'Update agent' : 'Up to date'}
             </button>
