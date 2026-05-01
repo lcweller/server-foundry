@@ -36,6 +36,13 @@
       "when": 1777604422748,
       "tag": "0004_classy_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777606794904,
+      "tag": "0005_lean_magdalene",
+      "breakpoints": true
     }
   ]
 }

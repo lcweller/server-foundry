@@ -1,6 +1,7 @@
 import { Wordmark } from '@/components/marketing/wordmark'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { NotificationBell } from './notification-bell'
 import { UserMenu } from './user-menu'
 
 type Props = {
@@ -26,7 +27,10 @@ export function AppShell({ user, children }: Props) {
               </Link>
             </nav>
           </div>
-          <UserMenu user={user} />
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <UserMenu user={user} />
+          </div>
         </div>
       </header>
 

@@ -1,11 +1,15 @@
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
-import { accounts as accountsTable } from '@/server/db/schema'
+import {
+  accounts as accountsTable,
+  notificationPreferences as notificationPrefsTable,
+} from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
 import { DangerZoneSection } from './danger-zone-section'
 import { EmailSection } from './email-section'
 import { LinkedAccountsSection } from './linked-accounts-section'
+import { NotificationsSection } from './notifications-section'
 import { PasswordSection } from './password-section'
 import { ProfileSection } from './profile-section'
 
@@ -27,6 +31,15 @@ export default async function SettingsPage() {
   const linkedProviders = new Set(linkedRows.map((r) => r.providerId))
   const hasPassword = linkedProviders.has('credential')
 
+  const prefsRows = await db
+    .select({
+      type: notificationPrefsTable.type,
+      inAppEnabled: notificationPrefsTable.inAppEnabled,
+      emailEnabled: notificationPrefsTable.emailEnabled,
+    })
+    .from(notificationPrefsTable)
+    .where(eq(notificationPrefsTable.userId, user.id))
+
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-16">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
@@ -43,6 +56,7 @@ export default async function SettingsPage() {
         <EmailSection currentEmail={user.email} />
         <PasswordSection hasPassword={hasPassword} />
         <LinkedAccountsSection linkedProviders={Array.from(linkedProviders)} />
+        <NotificationsSection preferences={prefsRows} />
         <DangerZoneSection />
       </div>
     </div>

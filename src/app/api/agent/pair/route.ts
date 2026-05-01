@@ -2,6 +2,7 @@ import { logger } from '@/lib/logger'
 import { issueAgentToken } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
 import { hosts, pairingCodes } from '@/server/db/schema'
+import { createNotification } from '@/server/notifications/create'
 import { and, eq, isNull } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -113,7 +114,12 @@ export async function POST(req: NextRequest) {
         .set({ usedAt: new Date(), hostId: host.id })
         .where(and(eq(pairingCodes.id, codeRow.id), isNull(pairingCodes.usedAt)))
 
-      return { hostId: host.id, token: token.raw } as const
+      return {
+        hostId: host.id,
+        token: token.raw,
+        userId: codeRow.userId,
+        displayName,
+      } as const
     })
 
     if ('error' in result) {
@@ -121,6 +127,18 @@ export async function POST(req: NextRequest) {
     }
 
     logger.info({ hostId: result.hostId }, 'host paired')
+
+    // Notify the host's owner that their pairing code was consumed.
+    // Useful confirmation if they shared the code remotely.
+    void createNotification({
+      userId: result.userId,
+      type: 'pairing_used',
+      severity: 'info',
+      title: 'Pairing code used',
+      body: `A new host paired using your code (${result.displayName}).`,
+      relatedHostId: result.hostId,
+    })
+
     return NextResponse.json({
       token: result.token,
       hostId: result.hostId,

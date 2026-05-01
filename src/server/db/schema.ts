@@ -30,6 +30,32 @@ export const serverStatusEnum = pgEnum('server_status', [
 
 export const logSeverityEnum = pgEnum('log_severity', ['debug', 'info', 'warn', 'error'])
 
+export const notificationSeverityEnum = pgEnum('notification_severity', [
+  'info',
+  'warning',
+  'error',
+])
+
+// Notification types — closed list, expanded as new event sources land.
+// Order is roughly grouped by source (host, agent, server, backup,
+// resource, security).
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'host_online',
+  'host_offline',
+  'agent_updated',
+  'agent_update_failed',
+  'server_started',
+  'server_crashed',
+  'server_updated',
+  'server_update_failed',
+  'backup_completed',
+  'backup_failed',
+  'memory_threshold',
+  'disk_threshold',
+  'pairing_used',
+  'auth_failure',
+])
+
 // ─────────────────────────────────────────────────────────────────────
 // users — application users (managed by Better Auth)
 //
@@ -303,6 +329,59 @@ export const gameServerLogs = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// notifications — in-app feed + (opt-in) email (Phase 8)
+//
+// Soft-delete via deleted_at so dismissed notifications can be
+// distinguished from never-issued ones for analytics. Composite index
+// on (user_id, created_at DESC) keeps the inbox query fast; partial
+// index on read_at IS NULL accelerates the unread badge.
+// ─────────────────────────────────────────────────────────────────────
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: notificationTypeEnum('type').notNull(),
+    severity: notificationSeverityEnum('severity').notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+    relatedHostId: uuid('related_host_id').references(() => hosts.id, { onDelete: 'set null' }),
+    relatedServerId: uuid('related_server_id').references(() => gameServers.id, {
+      onDelete: 'set null',
+    }),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => ({
+    byUserCreated: index('notifications_user_created_idx').on(table.userId, table.createdAt.desc()),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
+// notification_preferences — per-user, per-type opt-in (Phase 8)
+// ─────────────────────────────────────────────────────────────────────
+
+export const notificationPreferences = pgTable(
+  'notification_preferences',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: notificationTypeEnum('type').notNull(),
+    inAppEnabled: boolean('in_app_enabled').notNull().default(true),
+    emailEnabled: boolean('email_enabled').notNull().default(false),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.type] }),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // waitlist_signups — pre-launch email capture (Phase 1)
 //
 // Server Foundry-specific, unrelated to Better Auth.
@@ -347,7 +426,12 @@ export type NewHostLog = typeof hostLogs.$inferInsert
 export type GameServerLog = typeof gameServerLogs.$inferSelect
 export type NewGameServerLog = typeof gameServerLogs.$inferInsert
 export type LogSeverity = (typeof logSeverityEnum.enumValues)[number]
+export type Notification = typeof notifications.$inferSelect
+export type NewNotification = typeof notifications.$inferInsert
+export type NotificationPreference = typeof notificationPreferences.$inferSelect
+export type NewNotificationPreference = typeof notificationPreferences.$inferInsert
+export type NotificationType = (typeof notificationTypeEnum.enumValues)[number]
+export type NotificationSeverity = (typeof notificationSeverityEnum.enumValues)[number]
 
 // Notes on tables intentionally NOT defined here (introduced in later phases):
-//   backups, backup_configs, notifications, notification_preferences,
-//   agent_updates
+//   backups, backup_configs, agent_updates

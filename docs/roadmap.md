@@ -165,11 +165,20 @@ Per-game polish (backlog):
 
 ## Phase 8: Notifications (3-5 days)
 
-- [ ] Notification bell + dropdown
-- [ ] Full history page
-- [ ] Generate notifications from server-side events (heartbeat lost, server crashed, deployment complete, etc.)
-- [ ] Email delivery for opted-in notifications
-- [ ] User preferences page
+Committed:
+- [x] Schema: `notifications` + `notification_preferences` (migration 0005, 14-type enum, severity enum, composite-PK preferences)
+- [x] Notification bell in app shell — 20s poll, unread badge, dropdown with last 10 + click-through to detail
+- [x] `/dashboard/notifications` history page (filter all/unread, mark read, mark all read, dismiss)
+- [x] `/settings` notifications section with per-type in-app + email checkboxes
+- [x] Server-side hooks: host_online (transition), host_offline (transition), server_started, server_crashed, pairing_used
+- [x] Email delivery via `emails/Notification.tsx` + Resend (fire-and-forget so the WS path stays fast)
+
+Backlog (deferred):
+- [ ] Hooks for `agent_updated`/`agent_update_failed` (Phase 10)
+- [ ] Hooks for `backup_completed`/`backup_failed` (Phase 9)
+- [ ] Hooks for `memory_threshold`/`disk_threshold` (Phase 11 — needs threshold config UI)
+- [ ] Hooks for `auth_failure` (needs Better Auth event integration)
+- [ ] Live SSE for the bell (currently 20s poll)
 
 ## Phase 9: Backups (1 week)
 

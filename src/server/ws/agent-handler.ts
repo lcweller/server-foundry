@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { hashAgentToken, isAgentTokenSignatureValid } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
 import { gameServerLogs, gameServers, hostLogs, hostMetricsHourly, hosts } from '@/server/db/schema'
+import { createNotification } from '@/server/notifications/create'
 import {
   type AgentToPlatformMessage,
   HEARTBEAT_INTERVAL_SECONDS,
@@ -76,11 +77,22 @@ export async function handleAgentSocket(socket: WebSocket, req: IncomingMessage)
 
   logger.info({ hostId: host.id }, 'agent connected')
 
+  const wasOffline = host.status !== 'online'
   await db
     .update(hosts)
     .set({ status: 'online', lastSeenAt: new Date(), updatedAt: new Date() })
     .where(eq(hosts.id, host.id))
   liveMetricsBus.publishStatus({ hostId: host.id, status: 'online', ts: Date.now() })
+
+  if (wasOffline) {
+    void createNotification({
+      userId: host.userId,
+      type: 'host_online',
+      severity: 'info',
+      title: `${host.name} is online`,
+      relatedHostId: host.id,
+    })
+  }
 
   resetOfflineTimer(conn)
 
@@ -253,6 +265,29 @@ async function handleServerStatusChange(
   if (error) {
     logger.warn({ hostId: conn.hostId, serverId, error }, 'agent reported server error')
   }
+
+  // Notify on the interesting transitions only — running (just started)
+  // and crashed (failed health). Silent stops are usually user-driven.
+  if (status === 'running' && existing.status !== 'running') {
+    void createNotification({
+      userId: conn.userId,
+      type: 'server_started',
+      severity: 'info',
+      title: `${existing.name} is running`,
+      relatedHostId: conn.hostId,
+      relatedServerId: existing.id,
+    })
+  } else if (status === 'crashed' && existing.status !== 'crashed') {
+    void createNotification({
+      userId: conn.userId,
+      type: 'server_crashed',
+      severity: 'error',
+      title: `${existing.name} crashed`,
+      ...(error ? { body: error.slice(0, 1000) } : {}),
+      relatedHostId: conn.hostId,
+      relatedServerId: existing.id,
+    })
+  }
 }
 
 async function handleDeploymentProgress(
@@ -366,12 +401,29 @@ async function markOfflineIfStale(hostId: string) {
     const stale = Date.now() - conn.lastHeartbeatAt > OFFLINE_AFTER_MS
     if (!stale) return
   }
+  // Read the current row first so we know whether this is a real
+  // transition (online → offline) and so we have the user/name for
+  // the notification.
+  const before = await db.query.hosts.findFirst({
+    where: eq(hosts.id, hostId),
+    columns: { id: true, userId: true, name: true, status: true },
+  })
   await db
     .update(hosts)
     .set({ status: 'offline', updatedAt: new Date() })
     .where(eq(hosts.id, hostId))
   liveMetricsBus.publishStatus({ hostId, status: 'offline', ts: Date.now() })
   liveMetricsBus.clearHost(hostId)
+
+  if (before && before.status === 'online') {
+    void createNotification({
+      userId: before.userId,
+      type: 'host_offline',
+      severity: 'warning',
+      title: `${before.name} went offline`,
+      relatedHostId: before.id,
+    })
+  }
 }
 
 function send(socket: WebSocket, msg: PlatformToAgentMessage) {
