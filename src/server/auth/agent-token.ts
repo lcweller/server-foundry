@@ -1,5 +1,5 @@
 // Reachable from server.ts via the WS handler — see src/lib/env.ts.
-import { createHash, createHmac, randomBytes } from 'node:crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { env } from '@/lib/env'
 
 // Agent tokens are HMAC-signed bearer credentials issued at pairing time.
@@ -33,18 +33,16 @@ export function isAgentTokenSignatureValid(raw: string): boolean {
   const random = raw.slice(0, dot)
   const presented = raw.slice(dot + 1)
   const expected = createHmac('sha256', getAgentHmacSecret()).update(random).digest('base64url')
-  return timingSafeEqualString(presented, expected)
+  // Both strings are deterministic-length base64url HMAC-SHA256 outputs
+  // (43 chars), so the lengths always match in well-formed input. Use
+  // the platform's vetted constant-time compare rather than a hand-
+  // rolled charCodeAt loop.
+  const presentedBuf = Buffer.from(presented, 'utf8')
+  const expectedBuf = Buffer.from(expected, 'utf8')
+  if (presentedBuf.length !== expectedBuf.length) return false
+  return timingSafeEqual(presentedBuf, expectedBuf)
 }
 
 export function hashAgentToken(raw: string): string {
   return createHash('sha256').update(raw).digest('hex')
-}
-
-function timingSafeEqualString(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return result === 0
 }

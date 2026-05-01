@@ -110,10 +110,23 @@ export async function POST(req: NextRequest) {
         return { error: 'Failed to create host.', status: 500 } as const
       }
 
-      await tx
+      // Atomic single-use guard: the conditional WHERE consumes the
+      // pairing code only if it's still unused. If a race lets two
+      // concurrent requests through the findFirst above, exactly one
+      // will hit zero-row UPDATE and we abort that branch — preventing
+      // the orphan-host case where both insert succeeds but only one
+      // wins the code.
+      const consumed = await tx
         .update(pairingCodes)
         .set({ usedAt: new Date(), hostId: host.id })
         .where(and(eq(pairingCodes.id, codeRow.id), isNull(pairingCodes.usedAt)))
+        .returning({ id: pairingCodes.id })
+
+      if (consumed.length === 0) {
+        // Lost the race; rolling back via thrown error is the cleanest
+        // way to undo the host insert in the same transaction.
+        throw new Error('PAIRING_CODE_RACE')
+      }
 
       return {
         hostId: host.id,
@@ -159,6 +172,12 @@ export async function POST(req: NextRequest) {
       agentVersion: AGENT_VERSION,
     })
   } catch (err) {
+    if (err instanceof Error && err.message === 'PAIRING_CODE_RACE') {
+      // Another concurrent request won the code. Surface as 409 so the
+      // agent retries with a fresh code rather than re-attempting this
+      // one.
+      return NextResponse.json({ error: 'Pairing code already used.' }, { status: 409 })
+    }
     logger.error({ err }, 'agent pair failed')
     return NextResponse.json({ error: 'Internal error.' }, { status: 500 })
   }

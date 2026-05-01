@@ -11,7 +11,8 @@
 // one instance, one loop.
 
 import { logger } from '@/lib/logger'
-import { startBackup, sweepExpiredBackups } from '@/server/actions/backups'
+import { startBackup } from '@/server/actions/backups'
+import { sweepExpiredBackups } from '@/server/backups/sweep'
 import { db } from '@/server/db'
 import {
   backupConfigs as backupConfigsTable,

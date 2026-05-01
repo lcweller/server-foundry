@@ -14,7 +14,7 @@ import {
 } from '@/server/db/schema'
 import { decryptJson, encryptJson, isCryptoConfigured } from '@/server/lib/crypto'
 import { sendToHost } from '@/server/ws/agent-handler'
-import { and, asc, desc, eq, isNull, lt, ne } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -342,10 +342,18 @@ export async function restoreBackup(input: unknown): Promise<ActionResult<undefi
 }
 
 // ─── helpers used by the UI ─────────────────────────────────────
+//
+// These are 'use server' functions, which means Next.js exposes them
+// as client-callable RPCs. They MUST enforce auth + ownership inside
+// the function body — relying on caller pre-checks is not safe when
+// the caller is the network.
 
 export async function listBackups(serverId: string): Promise<Backup[]> {
-  // Read-only; no auth here — caller should pre-check ownership in the
-  // server component that queries this.
+  if (!UUID_RE.test(serverId)) return []
+  const session = await getCurrentSession()
+  if (!session?.user) return []
+  const owned = await loadOwnedServer(session.user.id, serverId)
+  if (!owned) return []
   return db
     .select()
     .from(backups)
@@ -355,24 +363,17 @@ export async function listBackups(serverId: string): Promise<Backup[]> {
 }
 
 export async function loadBackupConfig(serverId: string): Promise<BackupConfig | null> {
+  if (!UUID_RE.test(serverId)) return null
+  const session = await getCurrentSession()
+  if (!session?.user) return null
+  const owned = await loadOwnedServer(session.user.id, serverId)
+  if (!owned) return null
   const row = await db.query.backupConfigs.findFirst({
     where: eq(backupConfigs.serverId, serverId),
   })
   return row ?? null
 }
 
-// ─── retention sweep helper (called by the scheduler) ───────────
-
-// Hard-delete rows whose retentionUntil has passed and whose status
-// is terminal. The S3 object lifecycle is managed by the user's bucket
-// policy in v1 — we don't issue DELETE requests against it from here.
-export async function sweepExpiredBackups(): Promise<void> {
-  await db
-    .delete(backups)
-    .where(and(ne(backups.status, 'running'), lt(backups.retentionUntil, new Date())))
-}
-
-// asc/isNull imported for symmetry — unused locally but keep the import
-// list consistent with other actions files.
+// asc imported for symmetry — unused locally but keep the import list
+// consistent with other actions files.
 void asc
-void isNull
