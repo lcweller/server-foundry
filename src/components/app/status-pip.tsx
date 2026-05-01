@@ -19,8 +19,8 @@ const statusMap: Record<HostStatus, { label: string; dot: string; text: string }
   },
   updating: {
     label: 'Updating',
-    dot: 'bg-ember animate-pulse',
-    text: 'text-ember',
+    dot: 'bg-info animate-pulse',
+    text: 'text-info',
   },
 }
 

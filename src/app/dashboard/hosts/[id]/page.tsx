@@ -3,15 +3,21 @@ import { LiveMetricsPanel } from '@/components/app/live-metrics'
 import { ServerStatusBadge } from '@/components/app/server-status-pip'
 import { StatusPip } from '@/components/app/status-pip'
 import { TerminalPanel } from '@/components/app/terminal-panel'
+import { UptimeHeatmap } from '@/components/app/uptime-heatmap'
+import { Callsign } from '@/components/ui/callsign'
+import { EmptyState } from '@/components/ui/empty-state'
+import { SectionHeader } from '@/components/ui/section-header'
+import { Surface } from '@/components/ui/surface'
 import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
 import {
   agentUpdates as agentUpdatesTable,
   gameCatalog as gameCatalogTable,
   gameServers as gameServersTable,
+  hostMetricsHourly as hostMetricsHourlyTable,
   hosts as hostsTable,
 } from '@/server/db/schema'
-import { and, asc, desc, eq, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNull } from 'drizzle-orm'
 import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -34,6 +40,9 @@ const TABS = [
   { id: 'logs', label: 'Logs' },
   { id: 'settings', label: 'Settings' },
 ] as const
+
+const HOUR_MS = 60 * 60 * 1000
+const UPTIME_WINDOW_HOURS = 24
 
 function formatBytes(bytes: bigint | null | undefined): string {
   if (bytes == null) return '—'
@@ -79,6 +88,22 @@ export default async function HostDetailPage({ params }: Props) {
     .where(and(eq(gameServersTable.hostId, host.id), isNull(gameServersTable.deletedAt)))
     .orderBy(asc(gameServersTable.createdAt))
 
+  // Last 24 UTC-aligned hour buckets where the host reported metrics.
+  // Used as a proxy for uptime — see uptime-heatmap.tsx for caveats.
+  const uptimeCutoff = new Date(
+    Math.floor(Date.now() / HOUR_MS) * HOUR_MS - (UPTIME_WINDOW_HOURS - 1) * HOUR_MS,
+  )
+  const uptimeRows = await db
+    .select({ hourBucket: hostMetricsHourlyTable.hourBucket })
+    .from(hostMetricsHourlyTable)
+    .where(
+      and(
+        eq(hostMetricsHourlyTable.hostId, host.id),
+        gte(hostMetricsHourlyTable.hourBucket, uptimeCutoff),
+      ),
+    )
+  const presentHours = uptimeRows.map((r) => r.hourBucket.toISOString())
+
   const updateRows = await db
     .select({
       id: agentUpdatesTable.id,
@@ -115,11 +140,17 @@ export default async function HostDetailPage({ params }: Props) {
 
       <header className="mt-8 flex flex-wrap items-end justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="truncate font-serif text-3xl leading-tight tracking-tight text-text sm:text-4xl">
+          <div className="flex items-center gap-3">
+            <Callsign id={host.id} className="text-accent" />
+            <span aria-hidden="true" className="text-text-faint">
+              ·
+            </span>
+            <StatusPip status={host.status} />
+          </div>
+          <h1 className="mt-3 truncate text-3xl leading-tight tracking-tight text-text sm:text-4xl">
             {host.name}
           </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <StatusPip status={host.status} />
+          <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1">
             <p className="font-mono text-xs text-text-muted">{host.hostname || '—'}</p>
             <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">
               {host.os || '—'}
@@ -141,7 +172,10 @@ export default async function HostDetailPage({ params }: Props) {
               >
                 {tab.label}
                 {tab.id === 'overview' ? (
-                  <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-ember" />
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 bottom-0 h-0.5 bg-accent"
+                  />
                 ) : null}
               </button>
             </li>
@@ -161,93 +195,123 @@ export default async function HostDetailPage({ params }: Props) {
           />
         </section>
 
-        <section>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Hardware</p>
-          <dl className="mt-4 grid gap-x-12 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-            <DetailItem label="CPU" value={host.cpuModel ?? '—'} />
-            <DetailItem label="Cores" value={host.cpuCores ? String(host.cpuCores) : '—'} />
-            <DetailItem label="RAM" value={formatBytes(host.ramBytes)} />
-            <DetailItem label="Storage" value={formatBytes(host.storageBytes)} />
-            <DetailItem label="GPU" value={host.gpuModel ?? '—'} />
-            <DetailItem label="Kernel" value={host.kernel ?? '—'} />
-          </dl>
+        <section className="space-y-4">
+          <SectionHeader
+            eyebrow="Uptime"
+            title="Last 24 hours"
+            subtitle="Each cell is one hour. Lime: agent reported in. Muted: no data — host was offline, restarting, or simply not heartbeating."
+          />
+          <Surface className="p-5">
+            <UptimeHeatmap presentHours={presentHours} />
+          </Surface>
         </section>
 
-        <section>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Connection</p>
-          <dl className="mt-4 grid gap-x-12 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-            <DetailItem label="IP" value={host.ip ?? '—'} mono />
-            <DetailItem label="Agent version" value={host.agentVersion ?? '—'} mono />
-            <DetailItem label="Last seen" value={formatDate(host.lastSeenAt)} />
-            <DetailItem label="Paired" value={formatDate(host.createdAt)} />
-          </dl>
+        <section className="space-y-4">
+          <SectionHeader eyebrow="Hardware" title="Machine" />
+          <Surface className="p-5">
+            <dl className="grid gap-x-12 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+              <DetailItem label="CPU" value={host.cpuModel ?? '—'} />
+              <DetailItem label="Cores" value={host.cpuCores ? String(host.cpuCores) : '—'} />
+              <DetailItem label="RAM" value={formatBytes(host.ramBytes)} />
+              <DetailItem label="Storage" value={formatBytes(host.storageBytes)} />
+              <DetailItem label="GPU" value={host.gpuModel ?? '—'} />
+              <DetailItem label="Kernel" value={host.kernel ?? '—'} />
+            </dl>
+          </Surface>
         </section>
 
-        <section>
-          <div className="flex items-end justify-between gap-4">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
-              Game servers
-            </p>
-            <Link
-              href={`/dashboard/hosts/${host.id}/deploy` as Route}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-ember px-4 text-xs font-medium text-background transition-colors hover:bg-ember-soft"
-            >
-              Deploy server
-            </Link>
-          </div>
+        <section className="space-y-4">
+          <SectionHeader eyebrow="Connection" title="Link to platform" />
+          <Surface className="p-5">
+            <dl className="grid gap-x-12 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+              <DetailItem label="IP" value={host.ip ?? '—'} mono />
+              <DetailItem label="Agent version" value={host.agentVersion ?? '—'} mono />
+              <DetailItem label="Last seen" value={formatDate(host.lastSeenAt)} />
+              <DetailItem label="Paired" value={formatDate(host.createdAt)} />
+            </dl>
+          </Surface>
+        </section>
+
+        <section className="space-y-4">
+          <SectionHeader
+            eyebrow="Game servers"
+            title="Worlds on this host"
+            action={
+              <Link
+                href={`/dashboard/hosts/${host.id}/deploy` as Route}
+                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-xs font-medium text-background transition-colors hover:bg-accent-soft"
+              >
+                Deploy server
+              </Link>
+            }
+          />
 
           {servers.length === 0 ? (
-            <p className="mt-4 text-sm text-text-muted">No servers deployed yet on this host.</p>
-          ) : (
-            <ul className="mt-4 divide-y divide-border rounded-md border border-border bg-surface">
-              {servers.map((server) => (
-                <li key={server.id}>
+            <Surface>
+              <EmptyState
+                eyebrow="Empty"
+                title="No worlds running yet."
+                body="Deploy a game server on this host — Valheim, Counter-Strike 2, Rust, and more are ready to go."
+                cta={
                   <Link
-                    href={`/dashboard/servers/${server.id}` as Route}
-                    className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-elevated"
+                    href={`/dashboard/hosts/${host.id}/deploy` as Route}
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-5 text-xs font-medium text-background transition-colors hover:bg-accent-soft"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-text">{server.name}</p>
-                      <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">
-                        {server.gameName} · port {server.port}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <ServerStatusBadge status={server.status} />
-                      <span aria-hidden="true" className="text-text-faint">
-                        →
-                      </span>
-                    </div>
+                    Deploy your first server
                   </Link>
-                </li>
-              ))}
-            </ul>
+                }
+              />
+            </Surface>
+          ) : (
+            <Surface>
+              <ul className="divide-y divide-border">
+                {servers.map((server) => (
+                  <li key={server.id}>
+                    <Link
+                      href={`/dashboard/servers/${server.id}` as Route}
+                      className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-elevated/60"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-text">{server.name}</p>
+                        <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.15em] text-text-faint">
+                          {server.gameName} · port {server.port}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <ServerStatusBadge status={server.status} />
+                        <span aria-hidden="true" className="text-text-faint">
+                          →
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Surface>
           )}
         </section>
 
-        <section>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Terminal</p>
-          <p className="mt-2 mb-4 text-xs text-text-muted">
-            Shell on the host as the foundry user. Tunnel goes browser → platform → agent → PTY;
-            nothing is exposed publicly.
-          </p>
+        <section className="space-y-4">
+          <SectionHeader
+            eyebrow="Terminal"
+            title="Remote shell"
+            subtitle="Browser → platform → agent → PTY. Nothing's exposed publicly."
+          />
           {host.status === 'online' ? (
             <TerminalPanel hostId={host.id} />
           ) : (
-            <div className="rounded-md border border-border bg-surface p-5 text-sm">
+            <Surface className="p-5 text-sm">
               <p className="text-text">Terminal is unavailable while the host is offline.</p>
-            </div>
+            </Surface>
           )}
         </section>
 
-        <section>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">
-            Agent updates
-          </p>
-          <p className="mt-2 mb-4 text-xs text-text-muted">
-            Verified, signed self-update flow. Health check rolls back automatically if the new
-            agent fails to come online.
-          </p>
+        <section className="space-y-4">
+          <SectionHeader
+            eyebrow="Agent updates"
+            title="Self-update history"
+            subtitle="Verified, signed self-update flow. Health check rolls back automatically if the new agent fails to come online."
+          />
           <AgentUpdatesSection
             hostId={host.id}
             currentVersion={host.agentVersion ?? null}
@@ -255,11 +319,12 @@ export default async function HostDetailPage({ params }: Props) {
           />
         </section>
 
-        <section>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-faint">Host logs</p>
-          <p className="mt-2 mb-4 text-xs text-text-muted">
-            Live tail of agent + host events. Filter by severity to focus.
-          </p>
+        <section className="space-y-4">
+          <SectionHeader
+            eyebrow="Host logs"
+            title="Live tail"
+            subtitle="Agent + host events. Filter by severity to focus."
+          />
           <LiveLogsPanel source="host" entityId={host.id} />
         </section>
       </div>
@@ -286,15 +351,15 @@ function DetailItem({
 
 function OfflineBanner() {
   return (
-    <div className="rounded-md border border-border bg-surface p-5 text-sm">
+    <Surface className="p-5 text-sm">
       <p className="text-text">This host hasn’t connected yet, or it went offline.</p>
       <p className="mt-1 text-text-muted">
         If you just paired it, check that the agent installed cleanly. Run{' '}
-        <code className="rounded bg-background px-1.5 py-0.5 font-mono text-xs text-ember">
+        <code className="rounded bg-background px-1.5 py-0.5 font-mono text-xs text-accent">
           systemctl status foundry-agent
         </code>{' '}
         on the host.
       </p>
-    </div>
+    </Surface>
   )
 }
