@@ -50,6 +50,24 @@ export const agentUpdateStatusEnum = pgEnum('agent_update_status', [
   'rolled_back',
 ])
 
+// Audit log actions — closed list, expanded as new privileged actions
+// land. See src/server/audit/record.ts for the call sites.
+export const auditActionEnum = pgEnum('audit_action', [
+  'host_paired',
+  'host_removed',
+  'pairing_code_created',
+  'server_deployed',
+  'server_started',
+  'server_stopped',
+  'server_restarted',
+  'server_deleted',
+  'backup_triggered',
+  'backup_restored',
+  'backup_config_updated',
+  'agent_update_triggered',
+  'auth_failure',
+])
+
 export const notificationTypeEnum = pgEnum('notification_type', [
   'host_online',
   'host_offline',
@@ -417,6 +435,36 @@ export const agentUpdates = pgTable(
 )
 
 // ─────────────────────────────────────────────────────────────────────
+// audit_log — immutable record of privileged actions (Phase 11)
+//
+// Insert-only by convention (no soft-delete column). user_id is
+// nullable because some actions originate without a logged-in user
+// (e.g. /api/agent/pair using a code that turns out to be invalid —
+// useful security signal). entity_type + entity_id let the UI link
+// back to the resource that was acted on. metadata is jsonb so each
+// action can capture whatever extra context is useful.
+// ─────────────────────────────────────────────────────────────────────
+
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    action: auditActionEnum('action').notNull(),
+    entityType: text('entity_type'),
+    entityId: uuid('entity_id'),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    byUserCreated: index('audit_log_user_created_idx').on(table.userId, table.createdAt.desc()),
+    byActionCreated: index('audit_log_action_created_idx').on(table.action, table.createdAt.desc()),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────
 // notifications — in-app feed + (opt-in) email (Phase 8)
 //
 // Soft-delete via deleted_at so dismissed notifications can be
@@ -529,5 +577,8 @@ export type BackupDestination = (typeof backupDestinationEnum.enumValues)[number
 export type AgentUpdate = typeof agentUpdates.$inferSelect
 export type NewAgentUpdate = typeof agentUpdates.$inferInsert
 export type AgentUpdateStatus = (typeof agentUpdateStatusEnum.enumValues)[number]
+export type AuditLogEntry = typeof auditLog.$inferSelect
+export type NewAuditLogEntry = typeof auditLog.$inferInsert
+export type AuditAction = (typeof auditActionEnum.enumValues)[number]
 
 // All planned tables now exist.

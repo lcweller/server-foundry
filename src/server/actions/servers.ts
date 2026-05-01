@@ -1,6 +1,7 @@
 'use server'
 
 import { logger } from '@/lib/logger'
+import { recordAudit } from '@/server/audit/record'
 import { getCurrentSession } from '@/server/auth/session'
 import { db } from '@/server/db'
 import { gameCatalog, gameServers, hosts } from '@/server/db/schema'
@@ -141,6 +142,13 @@ export async function deployServer(input: unknown): Promise<ActionResult<{ serve
     { userId: session.user.id, hostId, serverId: created.id, dispatched: sent },
     'server deploy requested',
   )
+  void recordAudit({
+    userId: session.user.id,
+    action: 'server_deployed',
+    entityType: 'server',
+    entityId: created.id,
+    metadata: { hostId, gameId, port: desiredPort, dispatched: sent },
+  })
 
   revalidatePath(`/dashboard/hosts/${hostId}`)
   revalidatePath(`/dashboard/servers/${created.id}`)
@@ -151,6 +159,7 @@ async function lifecycle(
   serverId: string,
   type: 'start_server' | 'stop_server' | 'restart_server',
   ownerLog: string,
+  auditAction: 'server_started' | 'server_stopped' | 'server_restarted',
 ): Promise<ActionResult<undefined>> {
   const session = await getCurrentSession()
   if (!session?.user) {
@@ -175,6 +184,12 @@ async function lifecycle(
   }
 
   logger.info({ userId: session.user.id, serverId }, ownerLog)
+  void recordAudit({
+    userId: session.user.id,
+    action: auditAction,
+    entityType: 'server',
+    entityId: serverId,
+  })
   revalidatePath(`/dashboard/servers/${serverId}`)
   revalidatePath(`/dashboard/hosts/${row.host.id}`)
   return { ok: true, data: undefined }
@@ -183,19 +198,24 @@ async function lifecycle(
 export async function startServer(input: unknown): Promise<ActionResult<undefined>> {
   const parsed = idInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid request.', code: 'VALIDATION' }
-  return lifecycle(parsed.data.serverId, 'start_server', 'server start requested')
+  return lifecycle(parsed.data.serverId, 'start_server', 'server start requested', 'server_started')
 }
 
 export async function stopServer(input: unknown): Promise<ActionResult<undefined>> {
   const parsed = idInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid request.', code: 'VALIDATION' }
-  return lifecycle(parsed.data.serverId, 'stop_server', 'server stop requested')
+  return lifecycle(parsed.data.serverId, 'stop_server', 'server stop requested', 'server_stopped')
 }
 
 export async function restartServer(input: unknown): Promise<ActionResult<undefined>> {
   const parsed = idInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid request.', code: 'VALIDATION' }
-  return lifecycle(parsed.data.serverId, 'restart_server', 'server restart requested')
+  return lifecycle(
+    parsed.data.serverId,
+    'restart_server',
+    'server restart requested',
+    'server_restarted',
+  )
 }
 
 export async function deleteServer(input: unknown): Promise<ActionResult<undefined>> {
@@ -235,6 +255,13 @@ export async function deleteServer(input: unknown): Promise<ActionResult<undefin
   }
 
   logger.info({ userId: session.user.id, serverId, dispatched: sent }, 'server delete requested')
+  void recordAudit({
+    userId: session.user.id,
+    action: 'server_deleted',
+    entityType: 'server',
+    entityId: serverId,
+    metadata: { dispatched: sent },
+  })
   revalidatePath(`/dashboard/hosts/${row.host.id}`)
   revalidatePath(`/dashboard/servers/${serverId}`)
   return { ok: true, data: undefined }

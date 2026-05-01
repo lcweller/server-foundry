@@ -2,10 +2,12 @@ import { requireUser } from '@/server/auth/session'
 import { db } from '@/server/db'
 import {
   accounts as accountsTable,
+  auditLog as auditLogTable,
   notificationPreferences as notificationPrefsTable,
 } from '@/server/db/schema'
-import { eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
+import { AuditSection } from './audit-section'
 import { DangerZoneSection } from './danger-zone-section'
 import { EmailSection } from './email-section'
 import { LinkedAccountsSection } from './linked-accounts-section'
@@ -40,6 +42,28 @@ export default async function SettingsPage() {
     .from(notificationPrefsTable)
     .where(eq(notificationPrefsTable.userId, user.id))
 
+  const auditRows = await db
+    .select({
+      id: auditLogTable.id,
+      action: auditLogTable.action,
+      entityType: auditLogTable.entityType,
+      entityId: auditLogTable.entityId,
+      ip: auditLogTable.ip,
+      createdAt: auditLogTable.createdAt,
+    })
+    .from(auditLogTable)
+    .where(eq(auditLogTable.userId, user.id))
+    .orderBy(desc(auditLogTable.createdAt))
+    .limit(50)
+  const auditItems = auditRows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    entityType: r.entityType,
+    entityId: r.entityId,
+    ip: r.ip,
+    createdAt: r.createdAt.toISOString(),
+  }))
+
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-16">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
@@ -57,6 +81,7 @@ export default async function SettingsPage() {
         <PasswordSection hasPassword={hasPassword} />
         <LinkedAccountsSection linkedProviders={Array.from(linkedProviders)} />
         <NotificationsSection preferences={prefsRows} />
+        <AuditSection rows={auditItems} />
         <DangerZoneSection />
       </div>
     </div>

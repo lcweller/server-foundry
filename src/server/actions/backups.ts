@@ -1,6 +1,7 @@
 'use server'
 
 import { logger } from '@/lib/logger'
+import { recordAudit } from '@/server/audit/record'
 import { getCurrentSession } from '@/server/auth/session'
 import { db } from '@/server/db'
 import {
@@ -108,6 +109,18 @@ export async function updateBackupConfig(input: unknown): Promise<ActionResult<u
         updatedAt: new Date(),
       },
     })
+
+  void recordAudit({
+    userId: session.user.id,
+    action: 'backup_config_updated',
+    entityType: 'server',
+    entityId: parsed.data.serverId,
+    metadata: {
+      destinationType: parsed.data.destination.type,
+      isEnabled: parsed.data.isEnabled,
+      hasSchedule: Boolean(parsed.data.scheduleCron),
+    },
+  })
 
   revalidatePath(`/dashboard/servers/${parsed.data.serverId}`)
   return { ok: true, data: undefined }
@@ -232,6 +245,14 @@ export async function startBackup(
     .set({ lastRunAt: new Date(), updatedAt: new Date() })
     .where(eq(backupConfigs.serverId, serverId))
 
+  void recordAudit({
+    userId,
+    action: 'backup_triggered',
+    entityType: 'server',
+    entityId: serverId,
+    metadata: { backupId: created.id, triggeredBy },
+  })
+
   revalidatePath(`/dashboard/servers/${serverId}`)
   return { ok: true, data: { backupId: created.id } }
 }
@@ -307,6 +328,14 @@ export async function restoreBackup(input: unknown): Promise<ActionResult<undefi
   if (!sent) {
     return { ok: false, error: 'Host is offline.', code: 'HOST_OFFLINE' }
   }
+
+  void recordAudit({
+    userId: session.user.id,
+    action: 'backup_restored',
+    entityType: 'server',
+    entityId: parsed.data.serverId,
+    metadata: { backupId: parsed.data.backupId },
+  })
 
   revalidatePath(`/dashboard/servers/${parsed.data.serverId}`)
   return { ok: true, data: undefined }

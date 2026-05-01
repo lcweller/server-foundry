@@ -2,6 +2,7 @@
 
 import { randomInt } from 'node:crypto'
 import { logger } from '@/lib/logger'
+import { recordAudit } from '@/server/audit/record'
 import { getCurrentSession } from '@/server/auth/session'
 import { db } from '@/server/db'
 import { hosts, pairingCodes } from '@/server/db/schema'
@@ -46,6 +47,11 @@ export async function createPairingCode(): Promise<
         expiresAt,
       })
       logger.info({ userId: session.user.id }, 'pairing code created')
+      void recordAudit({
+        userId: session.user.id,
+        action: 'pairing_code_created',
+        metadata: { expiresAt: expiresAt.toISOString() },
+      })
       return { ok: true, data: { code, expiresAt: expiresAt.toISOString() } }
     } catch (err) {
       attempts++
@@ -89,6 +95,12 @@ export async function removeHost(input: unknown): Promise<ActionResult<undefined
     }
 
     logger.info({ userId: session.user.id, hostId }, 'host removed')
+    void recordAudit({
+      userId: session.user.id,
+      action: 'host_removed',
+      entityType: 'host',
+      entityId: hostId,
+    })
     revalidatePath('/dashboard')
     return { ok: true, data: undefined }
   } catch (err) {

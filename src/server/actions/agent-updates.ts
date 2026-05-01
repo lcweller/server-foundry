@@ -2,6 +2,7 @@
 
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
+import { recordAudit } from '@/server/audit/record'
 import { getCurrentSession } from '@/server/auth/session'
 import { db } from '@/server/db'
 import { agentUpdates, hosts } from '@/server/db/schema'
@@ -102,6 +103,14 @@ export async function triggerAgentUpdate(
   }
 
   logger.info({ hostId: host.id, updateId: created.id, version }, 'agent update dispatched')
+
+  void recordAudit({
+    userId: session.user.id,
+    action: 'agent_update_triggered',
+    entityType: 'host',
+    entityId: host.id,
+    metadata: { updateId: created.id, fromVersion: host.agentVersion ?? null, toVersion: version },
+  })
 
   revalidatePath(`/dashboard/hosts/${host.id}`)
   return { ok: true, data: { updateId: created.id } }

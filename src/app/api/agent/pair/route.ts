@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import { recordAudit } from '@/server/audit/record'
 import { issueAgentToken } from '@/server/auth/agent-token'
 import { db } from '@/server/db'
 import { hosts, pairingCodes } from '@/server/db/schema'
@@ -123,10 +124,23 @@ export async function POST(req: NextRequest) {
     })
 
     if ('error' in result) {
+      void recordAudit({
+        action: 'auth_failure',
+        entityType: 'pairing_code',
+        metadata: { reason: result.error, codePrefix: code.slice(0, 4) },
+      })
       return NextResponse.json({ error: result.error }, { status: result.status as number })
     }
 
     logger.info({ hostId: result.hostId }, 'host paired')
+
+    void recordAudit({
+      userId: result.userId,
+      action: 'host_paired',
+      entityType: 'host',
+      entityId: result.hostId,
+      metadata: { displayName: result.displayName },
+    })
 
     // Notify the host's owner that their pairing code was consumed.
     // Useful confirmation if they shared the code remotely.
