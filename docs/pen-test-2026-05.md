@@ -243,11 +243,7 @@ Re-running this audit should add coverage for:
 
 ## Re-audit triggers
 
-Re-run this audit when:
-
-- Adding any new `/api/*` route or `/ws/*` socket handler
-- Modifying `'use server'` files (treat every new export as a public
-  RPC unless gated)
-- Changing the agent protocol (`src/shared/agent-protocol.ts`)
-- Before flipping the landing page from soft-preview to public
-- After any auth-related dependency bump (Better Auth, Drizzle, ws)
+Lives in `docs/runbooks/first-public-deploy.md` § "Re-audit triggers".
+That runbook is the operational source of truth — when triggers fire,
+re-run this audit's findings list against the relevant surface and
+add new findings to a fresh `docs/pen-test-YYYY-MM.md`.
