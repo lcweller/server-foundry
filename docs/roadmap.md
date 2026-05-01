@@ -147,12 +147,21 @@ Remote terminal (committed):
 
 Add support for: Minecraft, Counter-Strike 2, Rust, ARK, Terraria, Project Zomboid, 7 Days to Die.
 
-For each game:
-- [ ] Seed `game_catalog`
-- [ ] Define config schema
-- [ ] Add SteamCMD recipe (or non-Steam install for Minecraft Java)
-- [ ] Test deployment end-to-end
-- [ ] Add icon/logo
+Catalog + recipes (committed):
+- [x] Counter-Strike 2 — SteamCMD 730, requires GSLT
+- [x] Rust — SteamCMD 258550
+- [x] ARK: Survival Evolved — SteamCMD 376030, ~30 GB install
+- [x] Terraria — SteamCMD 105600
+- [x] Project Zomboid — SteamCMD 380870
+- [x] 7 Days to Die — SteamCMD 294420 (XML config edited via terminal for v1)
+- [x] Minecraft (Java) — recipe shape only; install function throws (custom Mojang installer + EULA flow is the follow-up); seeded with `is_enabled=false` so it won't appear in the deploy UI yet
+- [x] Recipe shape refactored: each `GameRecipe` owns its install function, so non-Steam games (Minecraft) plug in alongside SteamCMD ones
+
+Per-game polish (backlog):
+- [ ] Test each deployment end-to-end on a real Linux host
+- [ ] Add icon/logo per game (`logo_url` populated)
+- [ ] Render INI/XML configs from richer config schemas (currently 7DTD requires terminal edits)
+- [ ] Minecraft Java installer (download Mojang server.jar, write eula.txt + server.properties)
 
 ## Phase 8: Notifications (3-5 days)
 
