@@ -3,6 +3,7 @@ name: Build & Push Docker Image
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 env:
@@ -38,6 +39,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=semver,pattern={{raw}}
             type=sha,prefix=,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 

@@ -19,6 +19,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# Skip runtime env validation during `next build` — production secrets
+# are not available here. Validation runs normally in the runner stage,
+# which is a separate stage and does NOT inherit this ENV.
+ENV SKIP_ENV_VALIDATION=1
 RUN npm run build
 
 # Strip dev dependencies for the runner image.

@@ -49,11 +49,46 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>
 
-const parsed = envSchema.safeParse(process.env)
+// Build-time shim — Next.js evaluates env validation during page-data
+// collection, where production secrets are not available. Runtime
+// validation in the runner stage is unaffected: SKIP_ENV_VALIDATION is
+// set only in the Docker builder stage and the CI build step, never in
+// the runner image or production environment.
+let resolvedEnv: Env
 
-if (!parsed.success) {
-  console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors)
-  throw new Error('Invalid environment variables — see logs above')
+if (process.env.SKIP_ENV_VALIDATION) {
+  // TEMPORARY: build-time stubs for SKIP_ENV_VALIDATION mode.
+  // These satisfy schema validation during `next build` page-data
+  // collection. Several modules (Resend, Postgres, Better Auth)
+  // read env values at module-load time and crash on undefined,
+  // so we can't simply cast process.env — we need real strings.
+  //
+  // TODO(env-lazy-init): refactor module-load consumers in
+  // src/server/email/client.ts, src/server/db/index.ts, and
+  // src/server/auth/index.ts to lazy-init their clients. When
+  // that's done, this stub block can be replaced with a true
+  // short-circuit cast.
+  const stubs = {
+    DATABASE_URL: 'postgres://stub:stub@localhost:5432/stub',
+    BETTER_AUTH_SECRET: 'stub_secret_min_32_chars_for_validation',
+    BETTER_AUTH_URL: 'http://localhost:3000',
+    RESEND_API_KEY: 're_stub_build_only',
+  }
+  const parsed = envSchema.safeParse({ ...stubs, ...process.env })
+  if (!parsed.success) {
+    console.error('SKIP_ENV_VALIDATION stub parse failed:', parsed.error.flatten().fieldErrors)
+    throw new Error(
+      'SKIP_ENV_VALIDATION stub schema mismatch — add the missing required var to the stub block in src/lib/env.ts',
+    )
+  }
+  resolvedEnv = parsed.data
+} else {
+  const parsed = envSchema.safeParse(process.env)
+  if (!parsed.success) {
+    console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors)
+    throw new Error('Invalid environment variables — see logs above')
+  }
+  resolvedEnv = parsed.data
 }
 
-export const env: Env = parsed.data
+export const env: Env = resolvedEnv
