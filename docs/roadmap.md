@@ -264,11 +264,24 @@ Pending:
 
 ## Phase 13: GameServerOS (2-3 weeks)
 
-- [ ] `live-build` configuration
-- [ ] First-boot TUI installer
-- [ ] Hardened base image
-- [ ] ISO build in CI
-- [ ] ISO download in dashboard
+Shipped in [`server-foundry-os`](https://github.com/serverfoundry/server-foundry-os):
+
+- [x] `live-build` configuration (Debian 12 bookworm, hybrid ISO,
+      GRUB UEFI+BIOS)
+- [x] Whiptail TUI installer with explicit failure UX
+- [x] Hardened base image — Phase 11 hardening baked into squashfs
+- [x] ISO build in CI (.github/workflows/build-iso.yml — build +
+      90s QEMU boot smoke + tag-triggered GitHub Release publish +
+      cross-repo dispatch on agent tag)
+- [x] ISO download in dashboard — link on /dashboard/hosts/new
+
+Backlog (deferred, see OS repo's docs/scope.md):
+- [ ] Signed-URL ISO download
+- [ ] LUKS / disk encryption + swap encryption
+- [ ] Wi-Fi support
+- [ ] UEFI Secure Boot
+- [ ] NVIDIA proprietary drivers
+- [ ] Multi-disk layouts
 
 ## What's NOT on the roadmap (out of scope)
 

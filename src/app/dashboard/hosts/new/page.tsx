@@ -31,6 +31,20 @@ export default function AddHostPage() {
         firewall rules.
       </p>
 
+      <p className="mt-4 max-w-2xl text-sm leading-relaxed text-text-faint">
+        New hardware?{' '}
+        <a
+          href="https://github.com/serverfoundry/server-foundry-os/releases/latest"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent hover:text-accent-soft transition-colors"
+        >
+          Download GameServerOS
+        </a>{' '}
+        — a hardened Debian 12 ISO with the agent baked in. Boot from USB, walk through six screens,
+        paste your pairing code, done.
+      </p>
+
       <div className="mt-12">
         <AddHostFlow />
       </div>

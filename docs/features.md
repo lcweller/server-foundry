@@ -173,12 +173,32 @@ Phase 12 and Phase 13 swapped; aligned now.)
 
 ## Phase 13: GameServerOS
 
-- [ ] Custom Debian 12 ISO via `live-build`
-- [ ] First-boot TUI installer (whiptail)
-- [ ] Pairing code entry at boot
-- [ ] Agent pre-baked, auto-configures
-- [ ] Hardened base image
-- [ ] ISO download from dashboard (signed URL)
+Lives in the sibling repo
+[`server-foundry-os`](https://github.com/serverfoundry/server-foundry-os).
+
+- [x] Custom Debian 12 ISO via `live-build`
+- [x] Whiptail TUI installer (welcome / disk / network / pairing /
+      summary / install)
+- [x] Pairing code entered at install time, consumed on first boot
+- [x] Agent pre-baked at AGENT_VERSION pinned in versions.env
+- [x] Hardened base image (Phase 11 nftables / sysctl / AppArmor /
+      polkit / systemd templates baked in)
+- [x] CI: build + 90s QEMU boot smoke + tag-triggered GitHub Release
+      with .iso + .sha256 attached
+- [x] ISO download from dashboard — link to GitHub releases on
+      `/dashboard/hosts/new`
+- [x] First-boot pairing failure UX: distinct error per failure mode
+      (network / expired / used / invalid), tty1 recovery loop,
+      `sudo foundry-pair <CODE>` for later re-pair
+
+Backlog (deferred, see server-foundry-os/docs/scope.md):
+- [ ] Signed-URL ISO download (currently public GitHub release link)
+- [ ] LUKS / disk encryption
+- [ ] Wi-Fi (no firmware-iwlwifi shipped)
+- [ ] UEFI Secure Boot (no signed shim)
+- [ ] NVIDIA proprietary drivers (nouveau only)
+- [ ] Multi-disk layouts (RAID / LVM / btrfs / ZFS)
+- [ ] aarch64 / non-x86_64 architectures
 
 ## Out of scope for v1
 

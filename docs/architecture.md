@@ -150,18 +150,37 @@ nftables, AppArmor profiles, systemd directives).
 ## Component 3: GameServerOS
 
 ### Status
-**Not part of this initial repo or even the second one.** Phase 3 deliverable. Documented for context.
+Lives in the sibling repo
+[`server-foundry-os`](https://github.com/serverfoundry/server-foundry-os).
+Phase 13 v1 shipped — see that repo's `docs/architecture.md` for the
+full boot/install/pair flow diagram.
 
 ### What it is
-A custom Debian 12-based bootable ISO that comes with the agent pre-installed and a first-boot TUI installer. Users can boot a spare PC from this ISO, walk through the installer, enter a pairing code, and have a fully managed game server host with no Linux experience needed.
+A custom Debian 12-based bootable ISO that comes with the agent
+pre-installed and a first-boot TUI installer. Users can boot a spare
+PC from this ISO, walk through six whiptail dialogs (welcome → disk
+→ network → pairing → summary → install), enter a pairing code, and
+have a fully managed game server host without ever opening a Linux
+shell.
 
 ### Stack
-- Debian 12 base via `live-build`
-- Hardened kernel parameters (sysctl)
-- nftables firewall (default deny inbound except agent + SSH)
-- AppArmor profiles for game server processes
-- Agent pre-baked, auto-configures from pairing code at first boot
-- Whiptail-based TUI installer
+- Debian 12 (bookworm) base via `live-build`
+- Hybrid ISO — boots in both UEFI and legacy BIOS firmware modes
+- GPT layout: 1 MB BIOS-boot + 512 MB FAT32 ESP + 4 GB swap + ext4 root
+- Phase 11 hardening pre-applied: sysctl, nftables, AppArmor profiles
+  for the four game profiles authored so far, polkit-scoped systemd
+  unit management, per-game-server static users via privilege-bridge
+  oneshot units. **All baked into the squashfs at build time** —
+  `install.sh`'s runtime steps translated into `live-build` chroot
+  hooks.
+- Agent pre-baked at the SHA pinned in the OS repo's `versions.env`,
+  refreshed automatically on every agent tag via cross-repo
+  `repository_dispatch`.
+- Whiptail TUI installer authored in this repo at
+  `/usr/local/sbin/foundry-installer`.
+- First-boot pairing on tty1 with explicit failure UX (distinct error
+  per failure mode, recovery loop on tty1, `sudo foundry-pair <CODE>`
+  for later re-pair).
 
 ## Communication protocols
 
