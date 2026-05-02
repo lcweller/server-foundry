@@ -246,9 +246,13 @@ Committed:
   `journalctl -fu foundry-agent.service`. Phase 6 SSE feed reads a
   single coherent stream. (agent commit `40c409a`)
 
+Partial:
+- [~] Penetration test of public surface — manual review +
+  fixes shipped (public-RPC gating, pair-code race,
+  timing-safe-compare; commit `bb85aa9`). Deferred: OWASP ZAP
+  baseline scan + nikto sweep against a live deploy.
+
 Pending:
-- [ ] Penetration test of public surface — OWASP ZAP baseline +
-  nikto + manual review of agent attack surface
 - [ ] AppArmor profiles for ARK, Terraria, Project Zomboid, 7DTD
 - [ ] AppArmor profile for `foundry-agent.service` itself
 - [ ] Tighten the four shipped profiles via `aa-logprof` after
@@ -256,11 +260,11 @@ Pending:
 
 ## Phase 12: Dashboard polish (1-2 weeks)
 
-- [ ] Cinematic Operations design implementation
-- [ ] Sankey traffic flow diagram
-- [ ] Uptime heatmap
-- [ ] Polished animations and transitions
-- [ ] Empty states and error states for every page
+- [x] Cinematic Operations design implementation (palette + primitives, commit `897a89d`)
+- [x] Sankey traffic flow diagram (overview redesign, commit `fca1b00`)
+- [x] Uptime heatmap (host detail refresh, commit `e3079f5`)
+- [x] Polished animations and transitions (commit `bda46fa`)
+- [x] Empty states and error states for every page (commit `cd480f2`)
 
 ## Phase 13: GameServerOS (2-3 weeks)
 
@@ -274,6 +278,7 @@ Shipped in [`server-foundry-os`](https://github.com/serverfoundry/server-foundry
       90s QEMU boot smoke + tag-triggered GitHub Release publish +
       cross-repo dispatch on agent tag)
 - [x] ISO download in dashboard — link on /dashboard/hosts/new
+      (platform integration commit `98c9bc5`)
 
 Backlog (deferred, see OS repo's docs/scope.md):
 - [ ] Signed-URL ISO download
