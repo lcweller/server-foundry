@@ -1,4 +1,5 @@
-import 'server-only'
+// Reachable from server.ts via the auth → email-sender chain — see
+// src/lib/env.ts on the `server-only` omission rationale.
 import { env } from '@/lib/env'
 import { Resend } from 'resend'
 

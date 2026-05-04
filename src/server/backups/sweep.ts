@@ -1,3 +1,6 @@
+// Reachable from server.ts via the backup scheduler — see
+// src/lib/env.ts on the `server-only` omission rationale.
+//
 // Server-internal backup-row reaper. Lives outside the 'use server'
 // action file so it can't be invoked as a client-callable RPC; the
 // scheduler imports this directly.
@@ -7,7 +10,6 @@
 // managed by the user's bucket policy in v1 — we don't issue DELETE
 // requests against the bucket from here.
 
-import 'server-only'
 import { db } from '@/server/db'
 import { backups } from '@/server/db/schema'
 import { and, lt, ne } from 'drizzle-orm'

@@ -1,4 +1,5 @@
-import 'server-only'
+// Reachable from server.ts via the terminal WS handler — see
+// src/lib/env.ts on the `server-only` omission rationale.
 import { env } from '@/lib/env'
 import { db } from '@/server/db'
 import { sendPasswordReset } from '@/server/email/send-password-reset'

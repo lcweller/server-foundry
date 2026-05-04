@@ -1,4 +1,5 @@
-// Reachable from server.ts directly — see src/lib/env.ts.
+// Reachable from server.ts directly — see src/lib/env.ts on the
+// `server-only` omission rationale.
 //
 // Browser-facing /ws/terminal WebSocket. Authenticates via the existing
 // Better Auth session cookie, verifies the user owns the requested

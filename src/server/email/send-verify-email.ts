@@ -1,4 +1,6 @@
-import 'server-only'
+// Reachable from server.ts via auth/index.ts (Better Auth wires this
+// into the email-verification + change-email callbacks) — see
+// src/lib/env.ts on the `server-only` omission rationale.
 import { logger } from '@/lib/logger'
 import { render } from '@react-email/components'
 import VerifyEmail from '../../../emails/VerifyEmail'

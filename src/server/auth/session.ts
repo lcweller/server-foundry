@@ -1,4 +1,6 @@
-import 'server-only'
+// Reachable from server.ts via the backup scheduler chain
+// (scheduler → actions/backups → here) — see src/lib/env.ts on
+// the `server-only` omission rationale.
 import { auth } from '@/server/auth'
 import type { Route } from 'next'
 import { headers } from 'next/headers'

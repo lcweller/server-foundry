@@ -12,7 +12,6 @@
 import { type IncomingMessage, createServer } from 'node:http'
 import next from 'next'
 import { WebSocketServer } from 'ws'
-import { startBackupScheduler } from './src/server/backups/scheduler'
 import { handleAgentSocket } from './src/server/ws/agent-handler'
 import { handleTerminalSocket } from './src/server/ws/terminal-handler'
 
@@ -25,6 +24,12 @@ async function main() {
   const handle = app.getRequestHandler()
 
   await app.prepare()
+
+  // MUST be loaded after app.prepare() — the scheduler's import chain
+  // reaches next/headers, which requires Next's AsyncLocalStorage
+  // runtime. That runtime is only initialized during app.prepare();
+  // top-level import here would crash at module load.
+  const { startBackupScheduler } = await import('./src/server/backups/scheduler')
 
   const httpServer = createServer((req, res) => {
     void handle(req, res)

@@ -1,7 +1,17 @@
 // Loaded by both Next.js routes and the custom server.ts. The
-// `server-only` guard would throw at custom-server boot (tsx doesn't
-// have Next's bundler shim), so we omit it here. This module imports
-// `process.env` directly — it cannot run in the browser regardless.
+// `server-only` guard would throw at custom-server boot — tsx uses
+// Node's plain resolver and gets the server-only package's throwing
+// main entry, while Next's bundler resolves it to a no-op stub. So
+// neither this file nor any other module reachable from server.ts
+// uses the directive.
+//
+// What that costs us: a dev-time guard against accidentally importing
+// this from a Client Component. The real security boundary lives
+// inside the functions (auth checks, ownership filters, etc.), not
+// in the import directive — removing the marker doesn't weaken any
+// runtime check. Files using this convention must still not be
+// imported from Client Components; treat the filename and this
+// comment as the contract.
 import { z } from 'zod'
 
 const envSchema = z.object({

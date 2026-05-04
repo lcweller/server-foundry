@@ -4,8 +4,11 @@
 // Errors are logged but not raised; an audit-write failure should
 // never block the user-visible action. (If audit logging itself is
 // down we'd rather lose the line than refuse a legitimate request.)
+//
+// Reachable from server.ts via the backup scheduler chain
+// (scheduler → actions/backups → here) — see src/lib/env.ts on
+// the `server-only` omission rationale.
 
-import 'server-only'
 import { logger } from '@/lib/logger'
 import { db } from '@/server/db'
 import { type AuditAction, auditLog } from '@/server/db/schema'
