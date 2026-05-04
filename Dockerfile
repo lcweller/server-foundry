@@ -37,7 +37,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN apk add --no-cache libc6-compat \
+RUN apk add --no-cache libc6-compat tini \
  && addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
@@ -57,4 +57,16 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node_modules/.bin/tsx", "server.ts"]
+# tini owns PID 1 and forwards signals + reaps zombies. Without it,
+# `docker stop` did not deliver SIGTERM cleanly to Node:
+#   - Plain `tsx` shim variant: tsx/dist/cli.mjs spawns Node as a
+#     child via child_process, leaving cli.mjs as PID 1.
+#   - `node --import tsx` variant: node became PID 1 and `docker stop`
+#     finished in 4s, but exit code was still 137 (SIGKILL) rather
+#     than 143 (SIGTERM exit) — something in the stop sequence was
+#     not delivering SIGTERM as expected. Tini is the canonical
+#     fix and removes the variable.
+# Migrations are idempotent — Drizzle tracks applied ones in
+# __drizzle_migrations, so re-running on every start is safe.
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["sh", "-c", "node --import tsx src/server/db/migrate.ts && exec node --import tsx server.ts"]
