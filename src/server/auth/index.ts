@@ -35,6 +35,18 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
 
+  // Schema uses Postgres's native uuid type for users, sessions,
+  // accounts, and verifications. Better Auth's default ID generator
+  // produces 32-char nanoid-style strings, which Postgres rejects
+  // with `invalid input syntax for type uuid` on every signup. The
+  // "uuid" shorthand makes Better Auth call crypto.randomUUID() for
+  // every model it manages.
+  advanced: {
+    database: {
+      generateId: 'uuid',
+    },
+  },
+
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
