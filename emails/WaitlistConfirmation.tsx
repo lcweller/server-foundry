@@ -40,7 +40,7 @@ export default function WaitlistConfirmation({ confirmationUrl }: WaitlistConfir
           <Text style={footer}>
             If you didn't sign up, you can ignore this email.
             <br />
-            Server Foundry · serverfoundry.gg
+            Server Foundry · serversfoundry.app
           </Text>
         </Container>
       </Body>
@@ -49,7 +49,7 @@ export default function WaitlistConfirmation({ confirmationUrl }: WaitlistConfir
 }
 
 WaitlistConfirmation.PreviewProps = {
-  confirmationUrl: 'https://serverfoundry.gg/waitlist/confirm?token=preview-token',
+  confirmationUrl: 'https://serversfoundry.app/waitlist/confirm?token=preview-token',
 } satisfies WaitlistConfirmationProps
 
 const body = {

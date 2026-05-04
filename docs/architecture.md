@@ -138,12 +138,12 @@ nftables, AppArmor profiles, systemd directives).
 
 ### Connection flow
 1. User generates a pairing code on dashboard (8 chars, format `XXXX-XXXX`, 15-min expiry)
-2. User runs `curl https://serverfoundry.gg/install.sh | bash` on their Linux host with `FOUNDRY_PAIR=XXXX-XXXX` env var
+2. User runs `curl https://serversfoundry.app/install.sh | bash` on their Linux host with `FOUNDRY_PAIR=XXXX-XXXX` env var
 3. Install script provisions the host: pkg deps (Node 22, AppArmor,
    polkit, nftables), foundry user, AppArmor profiles, per-game
    systemd templates, polkit rule, sysctl hardening, nftables
    firewall — all installed before the agent starts
-4. Agent connects to `wss://serverfoundry.gg/ws/agent` with pairing code
+4. Agent connects to `wss://serversfoundry.app/ws/agent` with pairing code
 5. Platform validates code, issues long-lived agent token (HMAC-signed), agent stores it in `/etc/foundry/credentials`
 6. Agent reconnects with token after this; pairing code is single-use and expires
 

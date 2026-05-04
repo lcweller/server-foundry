@@ -90,7 +90,7 @@ function PairingCodeView({
   const seconds = Math.floor((remainingMs % 60_000) / 1000)
   const expired = remainingMs === 0
 
-  const installCmd = `curl -fsSL https://serverfoundry.gg/install.sh | FOUNDRY_PAIR=${code} bash`
+  const installCmd = `curl -fsSL https://serversfoundry.app/install.sh | FOUNDRY_PAIR=${code} bash`
 
   async function copy(text: string, kind: 'code' | 'cmd') {
     try {
@@ -168,7 +168,7 @@ function PairingCodeView({
         </div>
 
         <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.18em] text-text-faint">
-          The install script lives at serverfoundry.gg/install.sh — published with the agent in
+          The install script lives at serversfoundry.app/install.sh — published with the agent in
           Phase 4. The pairing code itself is live now.
         </p>
       </section>

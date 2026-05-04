@@ -37,7 +37,7 @@ Threat model, secrets management, and hardening for Server Foundry.
 |---|---|---|
 | `DATABASE_URL` | Postgres connection string | Postgres container |
 | `BETTER_AUTH_SECRET` | Session signing key | `openssl rand -hex 32` |
-| `BETTER_AUTH_URL` | Public URL for OAuth callbacks | e.g. `https://serverfoundry.gg` |
+| `BETTER_AUTH_URL` | Public URL for OAuth callbacks | e.g. `https://serversfoundry.app` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth | Google Cloud Console |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | OAuth | GitHub Developer Settings |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | OAuth | Discord Developer Portal |
@@ -137,7 +137,7 @@ default-src 'self';
 script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com;
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: https://avatars.githubusercontent.com https://cdn.discordapp.com https://lh3.googleusercontent.com;
-connect-src 'self' wss://serverfoundry.gg https://api.resend.com;
+connect-src 'self' wss://serversfoundry.app https://api.resend.com;
 font-src 'self' data:;
 frame-ancestors 'none';
 ```

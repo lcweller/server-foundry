@@ -100,7 +100,7 @@ Used where Server Actions don't fit: webhooks, agent endpoints, public APIs, fil
 
 ## WebSocket Protocol (agent ↔ platform)
 
-The persistent connection is at `wss://serverfoundry.gg/ws/agent`. All messages are JSON, validated with Zod schemas defined in `src/shared/agent-protocol.ts` — that file is the source of truth; this section is human-readable summary.
+The persistent connection is at `wss://serversfoundry.app/ws/agent`. All messages are JSON, validated with Zod schemas defined in `src/shared/agent-protocol.ts` — that file is the source of truth; this section is human-readable summary.
 
 ### Connection lifecycle
 

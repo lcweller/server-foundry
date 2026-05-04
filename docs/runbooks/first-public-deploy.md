@@ -1,11 +1,11 @@
 # Runbook — first public deploy
 
-The single checklist for flipping `serverfoundry.gg` from soft-preview
+The single checklist for flipping `serversfoundry.app` from soft-preview
 to publicly indexable. Work top to bottom; every box must be checked
 before tweeting the URL. Anything that fails is a stop-the-line — go
 back to soft-preview and fix before retrying.
 
-Replace `serverfoundry.gg` below with the actual deploy domain if it
+Replace `serversfoundry.app` below with the actual deploy domain if it
 differs.
 
 ## 1. Pre-flight (before push)
@@ -33,7 +33,7 @@ differs.
   ```bash
   for i in {1..30}; do
     curl -s -o /dev/null -w "%{http_code}\n" \
-      -X POST https://serverfoundry.gg/api/auth/sign-in/email \
+      -X POST https://serversfoundry.app/api/auth/sign-in/email \
       -H 'content-type: application/json' \
       -d '{"email":"ratelimit-probe@example.invalid","password":"x"}'
   done
@@ -62,18 +62,18 @@ differs.
 ## 3. Live-deploy verification
 
 - [ ] **Cloudflare Tunnel health green.** Cloudflare dashboard →
-  Zero Trust → Networks → Tunnels: the tunnel for `serverfoundry.gg`
+  Zero Trust → Networks → Tunnels: the tunnel for `serversfoundry.app`
   shows status `HEALTHY` with at least one connector. From a fresh
   curl:
   ```bash
-  curl -sSI https://serverfoundry.gg/ | head -1
+  curl -sSI https://serversfoundry.app/ | head -1
   ```
   Expected: `HTTP/2 200`. Anything else (520, 521, 522 — Cloudflare
   origin errors) means the tunnel isn't reaching the container.
 
 - [ ] **HSTS + CSP headers present in production.**
   ```bash
-  curl -sSI https://serverfoundry.gg/ | grep -iE \
+  curl -sSI https://serversfoundry.app/ | grep -iE \
     '^(strict-transport-security|content-security-policy|x-content-type-options|x-frame-options|referrer-policy|permissions-policy):'
   ```
   Expected, all six headers present:
@@ -88,8 +88,8 @@ differs.
 
 - [ ] **Agent install script returns 200 over HTTPS.**
   ```bash
-  curl -sSI https://serverfoundry.gg/install.sh | head -1
-  curl -sS https://serverfoundry.gg/install.sh | head -3
+  curl -sSI https://serversfoundry.app/install.sh | head -1
+  curl -sS https://serversfoundry.app/install.sh | head -3
   ```
   Expected: `HTTP/2 200` and the first line starts with `#!/usr/bin/env
   bash`. If the redirect/path serves anything else, the agent
@@ -99,7 +99,7 @@ differs.
 
 - [ ] **Real-flow signup → confirmation email → login.** Use a real
   inbox you control (not an alias):
-  1. Open `https://serverfoundry.gg/` in a clean browser profile
+  1. Open `https://serversfoundry.app/` in a clean browser profile
   2. Enter the email in the waitlist form, submit
   3. Check the inbox — confirmation email should arrive within 60s
      from `<FROM_EMAIL>`
@@ -132,14 +132,14 @@ separate terminals; while they run, work through step 7 below.
   ```bash
   docker run --rm -v $(pwd):/zap/wrk/:rw \
     ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-    -t https://serverfoundry.gg \
+    -t https://serversfoundry.app \
     -r zap-baseline-$(date +%Y%m%d).html
   ```
   Save the report alongside the runbook in `docs/runbooks/scans/`.
 
 - [ ] **nikto scan against the live URL.**
   ```bash
-  nikto -h https://serverfoundry.gg \
+  nikto -h https://serversfoundry.app \
     -o docs/runbooks/scans/nikto-$(date +%Y%m%d).txt
   ```
 
@@ -177,7 +177,7 @@ Only after every box above is green:
 - [ ] Update `robots.ts` if it currently `disallow`s anything we now
   want indexed (today it disallows `/api/` and `/waitlist/confirm` —
   leave both, those are correct).
-- [ ] Submit `https://serverfoundry.gg/sitemap.xml` to Google Search
+- [ ] Submit `https://serversfoundry.app/sitemap.xml` to Google Search
   Console.
 - [ ] Tweet / share the URL.
 

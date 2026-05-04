@@ -43,7 +43,7 @@ export default function VerifyEmail({ name, verifyUrl }: Props) {
           <Text style={footer}>
             If you didn’t create this account, ignore this email.
             <br />
-            Server Foundry · serverfoundry.gg
+            Server Foundry · serversfoundry.app
           </Text>
         </Container>
       </Body>
@@ -53,7 +53,7 @@ export default function VerifyEmail({ name, verifyUrl }: Props) {
 
 VerifyEmail.PreviewProps = {
   name: 'Test',
-  verifyUrl: 'https://serverfoundry.gg/api/auth/verify-email?token=preview',
+  verifyUrl: 'https://serversfoundry.app/api/auth/verify-email?token=preview',
 } satisfies Props
 
 const body = {

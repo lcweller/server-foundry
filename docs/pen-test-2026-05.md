@@ -178,9 +178,9 @@ part of the Phase 12 / pre-launch checklist:
 
 ```bash
 # After first public deploy:
-nikto -h https://serverfoundry.gg -o nikto.txt
+nikto -h https://serversfoundry.app -o nikto.txt
 docker run -t owasp/zap2docker-stable zap-baseline.py \
-  -t https://serverfoundry.gg -r zap-baseline-report.html
+  -t https://serversfoundry.app -r zap-baseline-report.html
 ```
 
 Compare the reports against the findings in this document; prioritise
@@ -232,7 +232,7 @@ Re-running this audit should add coverage for:
   potential if names/email subjects ever come from user input;
   current paths don't, but verify if that ever changes
 - Agent host-side: `install.sh` download integrity (TLS to
-  `serverfoundry.gg`, but no signature verify on the script itself —
+  `serversfoundry.app`, but no signature verify on the script itself —
   curl|bash trust assumption)
 - Agent self-update signature verification — Phase 10 implementation
   uses ed25519 public key embedded at install time; needs end-to-end

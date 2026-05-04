@@ -38,7 +38,7 @@ Phased plan for building Server Foundry. Each phase produces a working, demo-abl
 - [ ] Deploy to Unraid behind Cloudflare Tunnel
 - [ ] Verify production: signup works, email arrives, confirmation works
 
-**Done when**: anyone on the internet can visit `serverfoundry.gg`, sign up, get a confirmation email, click the link, and see a success state.
+**Done when**: anyone on the internet can visit `serversfoundry.app`, sign up, get a confirmation email, click the link, and see a success state.
 
 ## Phase 2: Auth & accounts (3-5 days)
 
@@ -94,7 +94,7 @@ Agent side:
 - [ ] Reads token from `/etc/foundry/credentials`
 - [ ] Sends heartbeat every 3 seconds with vitals from `systeminformation`
 - [ ] Reconnects with exponential backoff on disconnect
-- [ ] Install script (`curl https://serverfoundry.gg/install.sh | bash`)
+- [ ] Install script (`curl https://serversfoundry.app/install.sh | bash`)
 - [ ] systemd unit file for auto-start
 
 **Done when**: a real Linux host runs the install script, connects, and the user sees live CPU/memory/disk in the dashboard.

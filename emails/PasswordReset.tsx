@@ -45,7 +45,7 @@ export default function PasswordReset({ name, resetUrl }: Props) {
             If you didn’t request a reset, you can safely ignore this email — your password won’t
             change.
             <br />
-            Server Foundry · serverfoundry.gg
+            Server Foundry · serversfoundry.app
           </Text>
         </Container>
       </Body>
@@ -55,7 +55,7 @@ export default function PasswordReset({ name, resetUrl }: Props) {
 
 PasswordReset.PreviewProps = {
   name: 'Test',
-  resetUrl: 'https://serverfoundry.gg/reset-password?token=preview',
+  resetUrl: 'https://serversfoundry.app/reset-password?token=preview',
 } satisfies Props
 
 const body = {

@@ -73,7 +73,7 @@ function SuccessState() {
   const shareText = encodeURIComponent(
     'Just signed up for @serverfoundry — self-hosted control plane for game servers. Bring your hardware, deploy in minutes.',
   )
-  const shareUrl = `https://x.com/intent/post?text=${shareText}&url=https%3A%2F%2Fserverfoundry.gg`
+  const shareUrl = `https://x.com/intent/post?text=${shareText}&url=https%3A%2F%2Fserversfoundry.app`
 
   return (
     <output aria-live="polite" className="block rounded-md border border-ember/40 bg-ember/5 p-6">

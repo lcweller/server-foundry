@@ -36,7 +36,7 @@ const envSchema = z.object({
   // Email — required for Phase 1 waitlist
   RESEND_API_KEY: z.string().min(1),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().email().default('hello@serverfoundry.gg'),
+  RESEND_FROM_EMAIL: z.string().email().default('hello@serversfoundry.app'),
 
   // Analytics — optional. When set in production, loads Cloudflare Web Analytics.
   CLOUDFLARE_ANALYTICS_BEACON_TOKEN: z.string().optional(),

@@ -8,7 +8,7 @@ The name, voice, and visual identity guide for Server Foundry. This doc gets upd
 
 The "foundry" metaphor: a place where things are forged, crafted, built with care. Game servers as worlds you cast and shape, not boxes you rent.
 
-Domain: `serverfoundry.gg` (preferred — `.gg` reads as gaming-native and modern)
+Domain: `serversfoundry.app` (preferred — `.gg` reads as gaming-native and modern)
 Fallback: `serverfoundry.com`, `serverfoundry.io`
 
 ## Tagline

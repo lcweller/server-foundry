@@ -66,7 +66,7 @@ export async function GET(request: Request) {
           textTransform: 'uppercase',
         }}
       >
-        serverfoundry.gg
+        serversfoundry.app
       </div>
     </div>,
     { ...size },

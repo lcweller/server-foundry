@@ -23,7 +23,7 @@ const instrumentSerif = Instrument_Serif({
   display: 'swap',
 })
 
-const SITE_URL = process.env.BETTER_AUTH_URL ?? 'https://serverfoundry.gg'
+const SITE_URL = process.env.BETTER_AUTH_URL ?? 'https://serversfoundry.app'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

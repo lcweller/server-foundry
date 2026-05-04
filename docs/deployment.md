@@ -26,7 +26,7 @@ Cloudflare Tunnel
        │
        │ public TLS
        ▼
-Public internet (serverfoundry.gg)
+Public internet (serversfoundry.app)
 ```
 
 ## Repo structure
@@ -315,7 +315,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_APP_URL=https://serverfoundry.gg
+            NEXT_PUBLIC_APP_URL=https://serversfoundry.app
 ```
 
 After this workflow succeeds, the image is available at:
@@ -361,7 +361,7 @@ ghcr.io/<your-username>/server-foundry:<branch-name>
    - Variables:
      - `DATABASE_URL`: `postgres://foundry:<password>@foundry-postgres:5432/foundry`
      - `BETTER_AUTH_SECRET`: <generated>
-     - `BETTER_AUTH_URL`: `https://serverfoundry.gg`
+     - `BETTER_AUTH_URL`: `https://serversfoundry.app`
      - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
      - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
      - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`
@@ -369,14 +369,14 @@ ghcr.io/<your-username>/server-foundry:<branch-name>
      - `RESEND_WEBHOOK_SECRET`
      - `AGENT_HMAC_SECRET`: <generated>
      - `BACKUP_ENCRYPTION_KEY`: <generated>
-     - `NEXT_PUBLIC_APP_URL`: `https://serverfoundry.gg`
+     - `NEXT_PUBLIC_APP_URL`: `https://serversfoundry.app`
    - Restart policy: `unless-stopped`
 
 ### Cloudflare Tunnel configuration
 
 Already configured on the Unraid host. Add a public hostname:
 
-- **Subdomain**: `serverfoundry.gg` (apex) and `www.serverfoundry.gg`
+- **Subdomain**: `serversfoundry.app` (apex) and `www.serversfoundry.app`
 - **Service**: `http://<unraid-ip>:3000`
 - **Origin Server Name**: leave blank
 - Cloudflare-side: enable "Always Use HTTPS", set "Edge Certificates" to "Full (strict)"

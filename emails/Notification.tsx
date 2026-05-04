@@ -49,7 +49,7 @@ export default function NotificationEmail({
             You're getting this because you opted in to email notifications for this event type.
             Manage preferences in your account settings.
             <br />
-            Server Foundry · serverfoundry.gg
+            Server Foundry · serversfoundry.app
           </Text>
         </Container>
       </Body>
@@ -62,7 +62,7 @@ NotificationEmail.PreviewProps = {
   severity: 'warning',
   title: 'home-server.lan went offline',
   body: null,
-  dashboardUrl: 'https://serverfoundry.gg/dashboard',
+  dashboardUrl: 'https://serversfoundry.app/dashboard',
 } satisfies NotificationEmailProps
 
 const bodyStyle = {
